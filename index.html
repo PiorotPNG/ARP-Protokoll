@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Netz-Simulator: Nachricht 1</title>
+<style>
+  :root {
+    --bg: #eef1f5; --panel: #ffffff; --ink: #16202b; --muted: #5b6876;
+    --line: #cfd6de; --cable: #8a96a3; --active: #1558d6;
+    --ok: #17794a; --drop: #b3261e; --req: #d9480f; --rep: #17794a; --msg: #1558d6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px 6px; flex-wrap: wrap; }
+  header h1 { font-size: clamp(19px, 2vw, 28px); margin: 0; }
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; }
+  .steps span { font-size: 14px; font-weight: 600; padding: 4px 12px; border-radius: 999px; border: 2px solid var(--line); color: var(--muted); background: var(--panel); }
+  .steps span.on { border-color: var(--active); color: #fff; background: var(--active); }
+  .steps span.done { border-color: var(--ok); color: var(--ok); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 440px); gap: 16px; padding: 6px 24px 10px; min-height: 0; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 18px; }
+  .left { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .stage { padding: 6px; }
+  .stage svg { width: 100%; height: auto; display: block; max-height: 62vh; }
+  aside { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  [hidden] { display: none !important; }
+
+  /* Formular */
+  .who { display: inline-block; background: var(--ink); color: #fff; font-weight: 700; border-radius: 6px; padding: 2px 10px; font-size: 14px; margin-bottom: 8px; }
+  .task { margin: 0 0 10px; font-size: 15.5px; line-height: 1.4; }
+  .frame { border: 2px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+  .row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; margin: 6px 0; }
+  .row label { font-weight: 700; color: var(--muted); font-size: 15px; }
+  input[type=text] { font: inherit; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 16px;
+    padding: 7px 9px; border: 2px solid var(--line); border-radius: 8px; width: 100%; min-width: 0; }
+  input[type=text]:focus { outline: none; border-color: var(--active); }
+  input.bad { border-color: var(--drop); background: #fdecea; }
+  .content { margin-top: 8px; padding: 8px 10px; background: #eaf2ff; border-left: 5px solid #2f7bff; border-radius: 0 8px 8px 0; font-size: 15.5px; line-height: 2; }
+  .content input[type=text] { width: 150px; display: inline-block; padding: 4px 7px; font-size: 15px; }
+  .content input.macin { width: 200px; }
+  .received { font-size: 14px; background: #f4f6f9; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button { font: inherit; font-size: 15.5px; font-weight: 600; padding: 9px 16px; border-radius: 10px; border: 2px solid var(--ink); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--ink); color: #fff; }
+  button.soft { border-color: var(--line); color: var(--muted); }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button:focus-visible { outline: 3px solid var(--active); outline-offset: 2px; }
+  #fs { display: inline-grid; place-items: center; padding: 7px 9px; }
+  .tip { margin-top: 10px; padding: 9px 11px; border-radius: 8px; background: #fff7e0; border: 1px solid #e6c56a; font-size: 15px; line-height: 1.4; }
+  .feedback { margin-top: 10px; padding: 9px 11px; border-radius: 8px; font-size: 15px; line-height: 1.4; }
+  .feedback.err { background: #fdecea; color: #7d1a14; border: 1px solid #f0b4ae; }
+  .feedback.ok { background: #e6f5ed; color: #0f5233; border: 1px solid #a9dcc0; }
+  .feedback.info { background: #e3ecfd; color: #0d3a8c; border: 1px solid #b4c9f5; }
+
+  /* Tabellen */
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 5px 7px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.c, th.c { text-align: center; }
+  tr.flash td { background: #d6f1e3; }
+  tr.flashbad td { background: #fde3e0; }
+  .emptyrow td { color: var(--muted); font-style: italic; }
+
+  /* Protokoll */
+  .log { min-height: 120px; max-height: 26vh; overflow: auto; }
+  .log ul { margin: 0; padding-left: 0; list-style: none; font-size: 15px; line-height: 1.45; }
+  .log li { margin: 2px 0; }
+  .log li.sw { color: #0d3a8c; } .log li.drop { color: var(--drop); } .log li.ok { color: var(--ok); font-weight: 600; }
+  .log li.sep { margin: 8px 0 4px 0; font-weight: 700; color: var(--ink); border-top: 1px solid var(--line); padding-top: 6px; }
+
+  /* Fachbegriffe */
+  .terms { display: grid; gap: 8px; margin: 8px 0; }
+  .term { border-radius: 10px; padding: 8px 10px; border: 2px solid; font-size: 15px; line-height: 1.4; }
+  .term b { display: block; font-size: 17px; }
+  .term.r { border-color: var(--req); } .term.r b { color: var(--req); }
+  .term.a { border-color: var(--rep); } .term.a b { color: var(--rep); }
+  .term.c { border-color: var(--active); } .term.c b { color: var(--active); }
+  .q { font-weight: 700; margin: 10px 0 4px; font-size: 15.5px; }
+
+  /* SVG */
+  .cable { fill: none; stroke: var(--cable); stroke-width: 5; stroke-linecap: round; }
+  .cable.hot { stroke: var(--active); stroke-width: 7; }
+  .pcbox { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+  .pc.me .pcbox { fill: #eaf2ff; stroke: var(--active); stroke-width: 3.5; }
+  .pc-name { font-size: 26px; font-weight: 800; text-anchor: middle; fill: var(--ink); }
+  .pc-ip { font-size: 18px; text-anchor: middle; fill: var(--active); font-weight: 700; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .pc-mac { font-size: 16px; text-anchor: middle; fill: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sw-box { fill: #16202b; }
+  .sw-name { font-size: 26px; font-weight: 800; fill: #fff; text-anchor: middle; }
+  .port { fill: #3a4756; stroke: #dfe6ee; stroke-width: 2; }
+  .port-num { font-size: 17px; font-weight: 700; fill: var(--ink); }
+  .badge rect { rx: 8; }
+  .badge text { font-size: 16px; font-weight: 700; fill: #fff; text-anchor: middle; }
+  .pkt rect { rx: 7; stroke: #fff; stroke-width: 2; }
+  .pkt text { font-size: 15px; font-weight: 800; fill: #fff; text-anchor: middle; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Netz‑Simulator: Nachricht 1 von PC 1 an PC 3</h1>
+  <div class="steps" id="steps">
+    <span data-s="1">1 Fragen</span><span data-s="2">2 Antworten</span><span data-s="3">3 Senden</span>
+  </div>
+</header>
+
+<main>
+  <div class="left">
+    <section class="card stage">
+      <svg id="net" viewBox="0 0 900 600" role="img" aria-label="Netz mit vier PCs und einem Switch"></svg>
+    </section>
+    <section class="card">
+      <h2>Was im Netz passiert</h2>
+      <div class="log"><ul id="log"></ul></div>
+    </section>
+  </div>
+
+  <aside>
+    <!-- Schritt 1: Frage -->
+    <section class="card" id="step1">
+      <span class="who">Du bist PC 1</span>
+      <p class="task">Du kennst nur die <b>IP von PC 3: 192.168.1.103</b>. Baue eine Nachricht, mit der du die MAC von PC 3 herausfindest. Trag genau das ein, was auf eurem Blatt steht.</p>
+      <div class="frame">
+        <div class="row"><label for="r_src">Von‑MAC</label><input type="text" id="r_src" autocomplete="off" spellcheck="false" placeholder="__:__:__:__:__:__"></div>
+        <div class="row"><label for="r_dst">An‑MAC</label><input type="text" id="r_dst" autocomplete="off" spellcheck="false" placeholder="__:__:__:__:__:__"></div>
+        <div class="content">
+          Wer hat die IP <input type="text" id="r_ip" autocomplete="off" spellcheck="false" placeholder="192.168.1.___">?<br>
+          Antwort an IP <input type="text" id="r_sip" autocomplete="off" spellcheck="false" placeholder="192.168.1.___">
+        </div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="b_send1">Senden</button>
+        <button class="soft" id="b_tip">Tipp</button>
+      </div>
+      <div id="tip1" class="tip" hidden></div>
+      <div id="fb1" class="feedback" hidden></div>
+    </section>
+
+    <!-- Schritt 2: Antwort -->
+    <section class="card" id="step2" hidden>
+      <span class="who" id="who2">Du bist PC 3</span>
+      <div class="received" id="recv"></div>
+      <p class="task">Baue die Antwort. Überlege: An wen muss sie gehen, und woher kennst du dessen MAC?</p>
+      <div class="frame">
+        <div class="row"><label for="a_src">Von‑MAC</label><input type="text" id="a_src" autocomplete="off" spellcheck="false" placeholder="__:__:__:__:__:__"></div>
+        <div class="row"><label for="a_dst">An‑MAC</label><input type="text" id="a_dst" autocomplete="off" spellcheck="false" placeholder="__:__:__:__:__:__"></div>
+        <div class="content">
+          Die IP <b class="mono" id="a_ip"></b> gehört zur MAC<br>
+          <input type="text" class="macin" id="a_mac" autocomplete="off" spellcheck="false" placeholder="__:__:__:__:__:__">
+        </div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="b_send2">Senden</button>
+      </div>
+      <div id="fb2" class="feedback" hidden></div>
+    </section>
+
+    <!-- Schritt 3: Nachricht 1 -->
+    <section class="card" id="step3" hidden>
+      <span class="who">Du bist PC 1</span>
+      <p class="task">Jetzt hat PC 1 eine Antwort. Schick Nachricht 1 los.</p>
+      <div class="frame">
+        <div class="row"><label>Von‑MAC</label><span class="mono">00:1B:44:11:3A:B7</span></div>
+        <div class="row"><label>An‑MAC</label><span class="mono" id="m_dst"></span></div>
+        <div class="content">„Ist der Drucker im 2. OG wieder online?“</div>
+      </div>
+      <div class="btns"><button class="primary" id="b_send3">Nachricht 1 senden</button></div>
+      <div id="fb3" class="feedback" hidden></div>
+    </section>
+
+    <!-- Geschafft -->
+    <section class="card" id="done" hidden>
+      <h2>Geschafft! So heißt das in echt</h2>
+      <div class="terms">
+        <div class="term r"><b>ARP‑Request (Broadcast)</b>Deine Frage „Wer hat die IP …?“ an <span class="mono">FF:FF:FF:FF:FF:FF</span>. Die geht an alle.</div>
+        <div class="term a"><b>ARP‑Reply (Unicast)</b>Die Antwort „Die IP … gehört zur MAC …“ geht nur an den Fragenden.</div>
+        <div class="term c"><b>ARP‑Cache</b>PC 1 merkt sich die Zuordnung IP → MAC für die nächsten Nachrichten.</div>
+      </div>
+      <p style="margin:4px 0;font-size:14.5px;color:var(--muted)">ARP = Address Resolution Protocol. Im Typfeld des Ethernet‑Frames steht dafür <span class="mono">0x0806</span>.</p>
+      <div id="hint2" class="feedback info" hidden></div>
+      <p class="q">Tragt die drei Begriffe in Aufgabe 3 ein.</p>
+      <p class="q">PC 1 will gleich noch eine Nachricht an PC 3 schicken. Muss er wieder fragen?</p>
+      <div class="btns">
+        <button id="b_again">Ausprobieren</button>
+        <button id="b_spoof">Zusatz: Was, wenn PC 4 lügt?</button>
+      </div>
+      <div id="spoofq" hidden>
+        <p class="q">Beantwortet die Zusatzaufgabe auf eurem Blatt:</p>
+        <ol style="margin:0;padding-left:20px;font-size:15px;line-height:1.45">
+          <li>Warum glaubt PC 1 der Antwort von PC 4?</li>
+          <li>Was kann PC 4 jetzt mit Nachricht 1 machen?</li>
+          <li>Warum ist das für ein Firmennetz gefährlich?</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>MAC‑Tabelle des Switches</h2>
+      <table><thead><tr><th>MAC‑Adresse</th><th class="c">Port</th></tr></thead><tbody class="mono" id="sw"></tbody></table>
+    </section>
+    <section class="card">
+      <h2 id="cacheTitle">ARP‑Cache von PC 1</h2>
+      <table><thead><tr><th>IP‑Adresse</th><th>MAC‑Adresse</th></tr></thead><tbody class="mono" id="cache"></tbody></table>
+    </section>
+    <div class="btns" style="margin-top:0">
+      <button class="soft" id="b_reset">Neu starten</button>
+      <button class="soft" id="fs" aria-label="Vollbild"></button>
+    </div>
+  </aside>
+</main>
+<div></div>
+
+<script>
+(function () {
+  "use strict";
+  var BC = "FF:FF:FF:FF:FF:FF";
+  var PCS = [
+    { id: 1, name: "PC 1", port: 2, ip: "192.168.1.101", mac: "00:1B:44:11:3A:B7", x: 730, y: 105 },
+    { id: 2, name: "PC 2", port: 4, ip: "192.168.1.102", mac: "3C:52:82:6E:0F:14", x: 730, y: 495 },
+    { id: 3, name: "PC 3", port: 1, ip: "192.168.1.103", mac: "00:1B:44:2C:91:E5", x: 170, y: 105 },
+    { id: 4, name: "PC 4", port: 3, ip: "192.168.1.104", mac: "F4:8E:38:A0:57:C2", x: 170, y: 495 }
+  ];
+  var PORTPOS = { 1: [365, 255], 2: [535, 255], 3: [365, 345], 4: [535, 345] };
+  var SWC = [450, 300];
+  function pcById(id) { return PCS.filter(function (p) { return p.id === id; })[0]; }
+  function pcByPort(n) { return PCS.filter(function (p) { return p.port === n; })[0]; }
+  function pcByMac(m) { return PCS.filter(function (p) { return p.mac === m; })[0]; }
+  function pcByIp(ip) { return PCS.filter(function (p) { return p.ip === ip; })[0]; }
+  function anchor(pc) { return [pc.x + (pc.x < 450 ? 95 : -95), pc.y + (pc.y < 300 ? 58 : -58)]; }
+
+  var swTable, cache, busy = false, stage = 1, tipLevel = 0, asked = null, answerer = null, replyBroadcast = false;
+
+  /* ---------- Hilfsfunktionen ---------- */
+  function normMac(s) {
+    var t = (s || "").trim().toUpperCase().replace(/[-.\s]/g, ":");
+    if (/^[0-9A-F]{12}$/.test(t)) t = t.match(/../g).join(":");
+    return /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(t) ? t : null;
+  }
+  function normIp(s) {
+    var t = (s || "").trim();
+    if (/^\d{1,3}$/.test(t)) t = "192.168.1." + t;
+    var m = t.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!m) return null;
+    for (var i = 1; i <= 4; i++) if (+m[i] > 255) return null;
+    return m.slice(1).map(Number).join(".");
+  }
+  function $(id) { return document.getElementById(id); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function say(el, cls, html) { var e = $(el); e.className = "feedback " + cls; e.innerHTML = html; e.hidden = false; }
+  function clearFb() { ["fb1", "fb2", "fb3"].forEach(function (i) { $(i).hidden = true; }); }
+  function mark(id, bad) { $(id).classList.toggle("bad", !!bad); }
+
+  var logEl = $("log");
+  function log(txt, cls) {
+    var li = document.createElement("li"); li.innerHTML = txt; if (cls) li.className = cls;
+    logEl.appendChild(li); li.scrollIntoView({ block: "nearest" });
+  }
+  function sep(txt) { log(txt, "sep"); }
+
+  /* ---------- Tabellen ---------- */
+  function renderSw(flashMac) {
+    var tb = $("sw"); tb.innerHTML = "";
+    Object.keys(swTable).forEach(function (m) {
+      var tr = document.createElement("tr"); if (m === flashMac) tr.className = "flash";
+      tr.innerHTML = "<td>" + m + "</td><td class='c'><b>" + swTable[m] + "</b></td>"; tb.appendChild(tr);
+    });
+  }
+  function renderCache(flashIp, bad) {
+    var tb = $("cache"); tb.innerHTML = "";
+    var keys = Object.keys(cache);
+    if (!keys.length) { tb.innerHTML = "<tr class='emptyrow'><td colspan='2'>(leer)</td></tr>"; return; }
+    keys.forEach(function (ip) {
+      var tr = document.createElement("tr"); if (ip === flashIp) tr.className = bad ? "flashbad" : "flash";
+      tr.innerHTML = "<td>" + ip + "</td><td>" + cache[ip] + "</td>"; tb.appendChild(tr);
+    });
+  }
+
+  /* ---------- SVG ---------- */
+  var NS = "http://www.w3.org/2000/svg", svg = $("net");
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    (parent || svg).appendChild(e); return e;
+  }
+  var cables = {}, badges = {}, pcG = {};
+  function drawNet() {
+    svg.innerHTML = "";
+    PCS.forEach(function (pc) {
+      var a = anchor(pc), p = PORTPOS[pc.port];
+      cables[pc.port] = el("line", { x1: a[0], y1: a[1], x2: p[0], y2: p[1], "class": "cable" });
+    });
+    el("rect", { x: 320, y: 255, width: 260, height: 90, rx: 12, "class": "sw-box" });
+    el("text", { x: 450, y: 309, "class": "sw-name" }).textContent = "Switch";
+    Object.keys(PORTPOS).forEach(function (n) {
+      var p = PORTPOS[n], top = p[1] === 255;
+      el("rect", { x: p[0] - 17, y: p[1] - (top ? 2 : 22), width: 34, height: 24, rx: 4, "class": "port" });
+      var left = p[0] < 450;
+      el("text", { x: left ? 308 : 592, y: p[1] + (top ? 20 : -6), "class": "port-num", "text-anchor": left ? "end" : "start" }).textContent = "Port " + n;
+    });
+    PCS.forEach(function (pc) {
+      var g = el("g", { "class": "pc" + (pc.id === 1 ? " me" : "") }); pcG[pc.id] = g;
+      el("rect", { x: pc.x - 125, y: pc.y - 62, width: 250, height: 124, rx: 12, "class": "pcbox" }, g);
+      el("text", { x: pc.x, y: pc.y - 22, "class": "pc-name" }, g).textContent = pc.name;
+      var t2 = el("text", { x: pc.x, y: pc.y + 8, "class": "pc-ip" }, g); t2.textContent = pc.ip;
+      var t3 = el("text", { x: pc.x, y: pc.y + 36, "class": "pc-mac" }, g); t3.textContent = pc.mac;
+      var b = el("g", { "class": "badge", opacity: 0 }); badges[pc.id] = b;
+      var by = pc.y < 300 ? pc.y - 86 : pc.y + 86;
+      b._r = el("rect", { x: pc.x - 110, y: by - 16, width: 220, height: 32 }, b);
+      b._t = el("text", { x: pc.x, y: by + 6 }, b);
+    });
+  }
+  function badge(id, txt, color) {
+    var b = badges[id]; b._t.textContent = txt; b._r.setAttribute("fill", color); b.setAttribute("opacity", 1);
+  }
+  function clearBadges() { PCS.forEach(function (p) { badges[p.id].setAttribute("opacity", 0); }); }
+  function hot(port, on) { cables[port].classList.toggle("hot", on); }
+
+  function move(g, from, to, ms) {
+    return new Promise(function (res) {
+      var t0 = null;
+      function step(ts) {
+        if (!t0) t0 = ts; var k = Math.min(1, (ts - t0) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        var x = from[0] + (to[0] - from[0]) * e, y = from[1] + (to[1] - from[1]) * e;
+        g.setAttribute("transform", "translate(" + x + "," + y + ")");
+        if (k < 1) requestAnimationFrame(step); else res();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+  function packet(label, color) {
+    var g = el("g", { "class": "pkt" });
+    el("rect", { x: -44, y: -17, width: 88, height: 34, fill: color }, g);
+    el("text", { x: 0, y: 6 }, g).textContent = label;
+    return g;
+  }
+  async function travelIn(pc, label, color) {
+    var g = packet(label, color); hot(pc.port, true);
+    await move(g, anchor(pc), PORTPOS[pc.port], 650);
+    await move(g, PORTPOS[pc.port], SWC, 350);
+    hot(pc.port, false); g.remove();
+  }
+  async function travelOut(ports, label, color) {
+    var all = ports.map(function (n) {
+      var g = packet(label, color), pc = pcByPort(n); hot(n, true);
+      return move(g, SWC, PORTPOS[n], 350).then(function () { return move(g, PORTPOS[n], anchor(pc), 650); })
+        .then(function () { hot(n, false); g.remove(); });
+    });
+    await Promise.all(all);
+  }
+
+  /* ---------- Netz-Logik ---------- */
+  // Rahmen durch den Switch schicken. Gibt die Liste der PCs zurück, die den Rahmen annehmen.
+  async function deliver(frame, sender, label, color) {
+    await travelIn(sender, label, color);
+    var src = frame.src, dst = frame.dst, inPort = sender.port;
+    if (swTable[src] === inPort) {
+      log("Switch: Von‑MAC <span class='mono'>" + src + "</span> steht schon mit Port " + inPort + " in der Tabelle, kein neuer Eintrag.", "sw");
+    } else {
+      swTable[src] = inPort; renderSw(src);
+      log("Switch: lernt Von‑MAC <span class='mono'>" + src + "</span> an Port " + inPort + ".", "sw");
+    }
+    var outPorts;
+    if (dst === BC) {
+      outPorts = [1, 2, 3, 4].filter(function (n) { return n !== inPort; });
+      log("Switch: An‑MAC <span class='mono'>" + BC + "</span> heißt „an alle“ → <b>Flooding</b> an Port " + outPorts.join(", ") + ".", "sw");
+    } else if (swTable[dst] !== undefined) {
+      if (swTable[dst] === inPort) {
+        log("Switch: An‑MAC liegt an Port " + inPort + ", von dort kam der Rahmen. Er wird verworfen.", "drop");
+        return [];
+      }
+      outPorts = [swTable[dst]];
+      log("Switch: An‑MAC <span class='mono'>" + dst + "</span> ist bekannt → <b>Forwarding</b> nur an Port " + outPorts[0] + ".", "sw");
+    } else {
+      outPorts = [1, 2, 3, 4].filter(function (n) { return n !== inPort; });
+      log("Switch: An‑MAC <span class='mono'>" + dst + "</span> ist unbekannt → <b>Flooding</b> an Port " + outPorts.join(", ") + ".", "sw");
+    }
+    await travelOut(outPorts, label, color);
+    var acc = [];
+    outPorts.forEach(function (n) {
+      var pc = pcByPort(n);
+      if (dst === BC || dst === pc.mac) acc.push(pc);
+      else { log(pc.name + ": An‑MAC ist weder meine MAC noch „an alle“ → verwerfen.", "drop"); badge(pc.id, "verworfen", "#8a96a3"); }
+    });
+    return acc;
+  }
+
+  /* ---------- Schritt 1: Frage ---------- */
+  var TIPS = [
+    "Stell dir vor, du bist neu im Großraumbüro und sollst etwas zu Frau Huber bringen. Du kennst nur ihren Namen. Wie findest du sie?",
+    "Erinnere dich ans Rollenspiel: Was macht der Switch mit einer An‑MAC, die er nicht kennt? Und nimmt ein PC einen Rahmen an, der nicht an seine eigene MAC adressiert ist?",
+    "Es gibt eine besondere MAC‑Adresse, die <b>jeder</b> PC annimmt: <span class='mono'>FF:FF:FF:FF:FF:FF</span> (alle 48 Bit auf 1)."
+  ];
+  $("b_tip").onclick = function () {
+    tipLevel = Math.min(TIPS.length, tipLevel + 1);
+    $("tip1").innerHTML = TIPS.slice(0, tipLevel).map(function (t, i) { return "<b>Tipp " + (i + 1) + ":</b> " + t; }).join("<br><br>");
+    $("tip1").hidden = false;
+    if (tipLevel === TIPS.length) $("b_tip").disabled = true;
+  };
+
+  $("b_send1").onclick = async function () {
+    if (busy) return; clearFb(); clearBadges();
+    var src = normMac($("r_src").value), dstRaw = $("r_dst").value, dst = normMac(dstRaw),
+        ip = normIp($("r_ip").value), sip = normIp($("r_sip").value), me = pcById(1);
+    ["r_src", "r_dst", "r_ip", "r_sip"].forEach(function (i) { mark(i, false); });
+    if (!src) { mark("r_src", 1); return say("fb1", "err", "Die Von‑MAC fehlt oder ist keine gültige MAC‑Adresse (6 Paare Hex‑Ziffern, z. B. <span class='mono'>00:1B:44:11:3A:B7</span>)."); }
+    if (src !== me.mac) { mark("r_src", 1); return say("fb1", "err", "Die Von‑MAC ist immer die <b>eigene</b> MAC des Absenders. Die setzt die Netzwerkkarte automatisch ein. Wie lautet die MAC von PC 1?"); }
+    if (!dst) {
+      mark("r_dst", 1);
+      if (/alle|all|jeder|broadcast/i.test(dstRaw)) return say("fb1", "err", "Gute Idee! Aber der Switch versteht nur MAC‑Adressen, kein Wort wie „alle“. Gibt es vielleicht eine MAC‑Adresse, die „an alle“ bedeutet? (→ Tipp)");
+      return say("fb1", "err", "Die An‑MAC fehlt oder ist keine gültige MAC‑Adresse (6 Paare Hex‑Ziffern).");
+    }
+    var other = pcByMac(dst);
+    if (other && other.id !== 1) { mark("r_dst", 1); return say("fb1", "err", "Moment! PC 1 kennt die MAC von " + other.name + " gar nicht. Er kennt nur seine eigene MAC und die IP von PC 3. Woher soll er <span class='mono'>" + dst + "</span> haben?"); }
+    if (!ip) { mark("r_ip", 1); return say("fb1", "err", "Trag ein, nach welcher IP du fragst."); }
+    if (!sip) { mark("r_sip", 1); return say("fb1", "err", "Trag ein, an welche IP die Antwort gehen soll. Dann weiß der Gefragte, wer fragt."); }
+    if (sip !== me.ip) { mark("r_sip", 1); return say("fb1", "err", "Die Antwort soll doch an dich zurück. Welche IP hat PC 1?"); }
+
+    busy = true; setButtons();
+    sep("Frage von PC 1: „Wer hat " + ip + "?“");
+    var acc = await deliver({ src: src, dst: dst }, me, "?", "var(--req)");
+    var hit = null;
+    acc.forEach(function (pc) {
+      if (pc.ip === ip) { hit = pc; badge(pc.id, "Das bin ich!", "var(--ok)"); log(pc.name + ": Gefragt ist " + ip + ". Das ist meine IP → ich antworte!", "ok"); }
+      else { badge(pc.id, "nicht meine IP", "#8a96a3"); log(pc.name + ": Ich lese die Frage. Gesucht ist " + ip + ", nicht meine IP → verwerfen.", "drop"); }
+    });
+    busy = false; setButtons();
+    if (!acc.length) {
+      if (dst !== BC && !swTable[dst]) return say("fb1", "err", "Der Switch hat deinen Rahmen zwar an alle Ports verteilt, aber <b>kein PC</b> hat ihn angenommen: Die An‑MAC gehört keinem. Ein PC liest nur Rahmen an seine eigene MAC oder an „alle“. (→ Tipp)");
+      return say("fb1", "err", "Deine Frage ist bei niemandem angekommen. Schau ins Protokoll, warum.");
+    }
+    if (!hit) return say("fb1", "err", "Alle haben deine Frage gelesen, aber niemand hat die IP " + ip + ". Nach welcher IP suchst du?");
+    asked = ip; answerer = hit;
+    if (hit.id !== 3) say("fb1", "info", "Es hat jemand geantwortet, aber ist das der PC, den du suchst?");
+    else say("fb1", "ok", "Deine Frage ist angekommen und " + hit.name + " fühlt sich angesprochen. Weiter mit Schritt 2!");
+    await sleep(900);
+    goStage(2);
+  };
+
+  /* ---------- Schritt 2: Antwort ---------- */
+  function prepStage2() {
+    var me = pcById(1);
+    $("who2").textContent = "Du bist " + answerer.name;
+    $("recv").innerHTML = "<b>Angekommen bei " + answerer.name + ":</b> „Wer hat die IP " + asked + "? Antwort an IP " + me.ip + "“<br>Von‑MAC dieser Frage: <span class='mono'>" + me.mac + "</span>";
+    $("a_ip").textContent = asked;
+    ["a_src", "a_dst", "a_mac"].forEach(function (i) { $(i).value = ""; mark(i, false); });
+    PCS.forEach(function (p) { pcG[p.id].classList.toggle("me", p.id === answerer.id); });
+  }
+  $("b_send2").onclick = async function () {
+    if (busy) return; clearFb(); clearBadges();
+    var src = normMac($("a_src").value), dst = normMac($("a_dst").value), mac = normMac($("a_mac").value), me = answerer;
+    ["a_src", "a_dst", "a_mac"].forEach(function (i) { mark(i, false); });
+    if (!src) { mark("a_src", 1); return say("fb2", "err", "Die Von‑MAC fehlt oder ist ungültig."); }
+    if (src !== me.mac) { mark("a_src", 1); return say("fb2", "err", "Die Von‑MAC ist immer die eigene MAC des Absenders. Du bist jetzt " + me.name + "."); }
+    if (!dst) { mark("a_dst", 1); return say("fb2", "err", "Die An‑MAC fehlt oder ist ungültig."); }
+    if (!mac) { mark("a_mac", 1); return say("fb2", "err", "Trag ein, zu welcher MAC die IP " + asked + " gehört."); }
+
+    busy = true; setButtons();
+    sep("Antwort von " + me.name + ": „" + asked + " hat " + mac + "“");
+    var acc = await deliver({ src: src, dst: dst }, me, "!", "var(--rep)");
+    var pc1 = acc.filter(function (p) { return p.id === 1; })[0];
+    acc.forEach(function (p) {
+      if (p.id !== 1) { badge(p.id, "nicht meine Frage", "#8a96a3"); log(p.name + ": Ich habe nichts gefragt → verwerfen.", "drop"); }
+    });
+    busy = false; setButtons();
+    if (!pc1) return say("fb2", "err", "Die Antwort ist nicht bei PC 1 angekommen. An wen muss sie gehen? Schau dir an, was du über die Frage weißt.");
+    cache[asked] = mac; renderCache(asked, false);
+    badge(1, "gespeichert!", "var(--ok)");
+    log("PC 1: Antwort erhalten. Ich speichere " + asked + " → <span class='mono'>" + mac + "</span> in meinem ARP‑Cache.", "ok");
+    replyBroadcast = dst === BC;
+    if (replyBroadcast) log("Hinweis: Die Antwort ging an alle. PC 2 und PC 4 mussten sie lesen, obwohl sie nichts gefragt hatten.", "drop");
+    say("fb2", "ok", "PC 1 hat die Antwort gespeichert. Weiter mit Schritt 3!");
+    await sleep(900);
+    goStage(3);
+  };
+
+  /* ---------- Schritt 3: Nachricht 1 ---------- */
+  function prepStage3() {
+    PCS.forEach(function (p) { pcG[p.id].classList.toggle("me", p.id === 1); });
+    var m = cache["192.168.1.103"];
+    $("m_dst").textContent = m || "?? (nicht im Cache)";
+  }
+  async function sendMsg1(fbId) {
+    var me = pcById(1), dst = cache["192.168.1.103"];
+    clearBadges();
+    if (!dst) {
+      say(fbId, "err", "Im ARP‑Cache von PC 1 steht keine MAC für <b>192.168.1.103</b>. Ihr habt nach " + asked + " gefragt. Starte neu und frag nach der IP von PC 3.");
+      return false;
+    }
+    busy = true; setButtons();
+    sep("Nachricht 1: PC 1 an " + dst);
+    log("PC 1: Im ARP‑Cache steht 192.168.1.103 → <span class='mono'>" + dst + "</span>. Diese MAC kommt als An‑MAC auf den Rahmen.");
+    var acc = await deliver({ src: me.mac, dst: dst }, me, "✉", "var(--msg)");
+    busy = false; setButtons();
+    var target = acc[0];
+    if (target && target.id === 3) {
+      badge(3, "Nachricht 1 angekommen!", "var(--ok)");
+      log("PC 3: Nachricht 1 an meine MAC → annehmen. „Ist der Drucker im 2. OG wieder online?“", "ok");
+      return true;
+    }
+    if (target) {
+      badge(target.id, "Nachricht 1 gelesen!", "var(--drop)");
+      log(target.name + ": Nachricht 1 ist an meine MAC adressiert → ich lese sie. Eigentlich war sie für PC 3!", "drop");
+      say(fbId, "err", "Nachricht 1 ist bei <b>" + target.name + "</b> gelandet, nicht bei PC 3! Im Cache steht die falsche MAC. Prüft eure Antwort in Schritt 2.");
+    } else say(fbId, "err", "Nachricht 1 ist bei niemandem angekommen. Im Cache steht eine MAC, die keinem PC gehört.");
+    return false;
+  }
+  $("b_send3").onclick = async function () {
+    if (busy) return; clearFb();
+    var ok = await sendMsg1("fb3");
+    if (ok) {
+      say("fb3", "ok", "Nachricht 1 ist bei PC 3 angekommen. Die Lücke auf dem Zettel ist gefüllt!");
+      if (replyBroadcast) { $("hint2").innerHTML = "Eure Antwort ging an <b>alle</b>. Das klappt, aber PC 3 kannte die MAC von PC 1 doch schon aus der Frage. Geht es gezielter?"; $("hint2").hidden = false; }
+      await sleep(700);
+      goStage(4);
+    }
+  };
+
+  /* ---------- Zusatz ---------- */
+  $("b_again").onclick = async function () {
+    if (busy) return;
+    sep("Noch eine Nachricht von PC 1 an PC 3");
+    log("PC 1: Die MAC von 192.168.1.103 steht schon im ARP‑Cache → <b>keine neue Frage nötig</b>.", "ok");
+    await sendMsg1("fb3");
+  };
+  $("b_spoof").onclick = async function () {
+    if (busy) return;
+    var me = pcById(1), p3 = pcById(3), p4 = pcById(4);
+    busy = true; setButtons(); clearBadges();
+    cache = {}; renderCache();
+    sep("Zusatz: PC 1 fragt noch einmal, und PC 4 lügt");
+    log("PC 1: Mein Cache ist leer (Einträge werden nach einiger Zeit gelöscht). Ich frage wieder.");
+    var acc = await deliver({ src: me.mac, dst: BC }, me, "?", "var(--req)");
+    acc.forEach(function (p) { if (p.id === 2) { badge(2, "nicht meine IP", "#8a96a3"); log("PC 2: Nicht meine IP → verwerfen.", "drop"); } });
+    badge(3, "Das bin ich!", "var(--ok)"); badge(4, "Das sag ich auch!", "var(--drop)");
+    log("PC 3: Das ist meine IP → ich antworte ehrlich.", "ok");
+    log("PC 4: Nicht meine IP … aber ich antworte trotzdem!", "drop");
+    await deliver({ src: p3.mac, dst: me.mac }, p3, "!", "var(--rep)");
+    cache["192.168.1.103"] = p3.mac; renderCache("192.168.1.103");
+    log("PC 1: Speichere 192.168.1.103 → <span class='mono'>" + p3.mac + "</span>.", "ok");
+    await sleep(500);
+    await deliver({ src: p4.mac, dst: me.mac }, p4, "!", "var(--drop)");
+    cache["192.168.1.103"] = p4.mac; renderCache("192.168.1.103", true);
+    log("PC 1: Noch eine Antwort! Ich überschreibe: 192.168.1.103 → <span class='mono'>" + p4.mac + "</span>. (ARP prüft nicht, wer die Wahrheit sagt.)", "drop");
+    busy = false; setButtons();
+    await sleep(500);
+    await sendMsg1("fb3");
+    $("fb3").hidden = true;
+    $("spoofq").hidden = false;
+  };
+
+  /* ---------- Ablauf ---------- */
+  function setButtons() {
+    ["b_send1", "b_send2", "b_send3", "b_again", "b_spoof", "b_reset"].forEach(function (i) { $(i).disabled = busy; });
+  }
+  function goStage(n) {
+    stage = n;
+    $("step1").hidden = n !== 1; $("step2").hidden = n !== 2; $("step3").hidden = n !== 3; $("done").hidden = n !== 4;
+    document.querySelectorAll("#steps span").forEach(function (s) {
+      var k = +s.dataset.s; s.className = k === n ? "on" : (k < n ? "done" : "");
+    });
+    if (n === 2) prepStage2();
+    if (n === 3) prepStage3();
+    if (n === 4) PCS.forEach(function (p) { pcG[p.id].classList.toggle("me", p.id === 1); });
+  }
+  function reset() {
+    swTable = { "00:1B:44:11:3A:B7": 2, "00:1B:44:2C:91:E5": 1, "F4:8E:38:A0:57:C2": 3, "3C:52:82:6E:0F:14": 4 };
+    cache = {}; tipLevel = 0; asked = null; answerer = null; replyBroadcast = false; busy = false;
+    $("b_tip").disabled = false; $("tip1").hidden = true; $("hint2").hidden = true; $("spoofq").hidden = true;
+    ["r_src", "r_dst", "r_ip", "r_sip"].forEach(function (i) { $(i).value = ""; mark(i, false); });
+    clearFb(); logEl.innerHTML = "";
+    drawNet(); renderSw(); renderCache(); setButtons();
+    log("Start: Die MAC‑Tabelle des Switches ist vom Rollenspiel schon gefüllt. Der ARP‑Cache von PC 1 ist leer.");
+    goStage(1);
+  }
+  $("b_reset").onclick = function () { if (!busy) reset(); };
+
+  /* ---------- Vollbild ---------- */
+  (function () {
+    var fsBtn = $("fs");
+    var ICON_IN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>';
+    var ICON_OUT = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>';
+    var d = document, de = d.documentElement;
+    function isFs() { return !!(d.fullscreenElement || d.webkitFullscreenElement); }
+    function toggle() {
+      try {
+        if (isFs()) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+        var r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de); if (r && r.catch) r.catch(function () {});
+      } catch (e) {}
+    }
+    function update() { fsBtn.innerHTML = (isFs() ? ICON_OUT : ICON_IN) + " Vollbild"; fsBtn.title = "Vollbild (Taste F, außer in Eingabefeldern)"; }
+    fsBtn.addEventListener("click", function () { toggle(); fsBtn.blur(); });
+    d.addEventListener("fullscreenchange", update); d.addEventListener("webkitfullscreenchange", update);
+    d.addEventListener("keydown", function (ev) {
+      if ((ev.key === "f" || ev.key === "F") && !/INPUT|TEXTAREA/.test(ev.target.tagName) && !ev.ctrlKey && !ev.metaKey) toggle();
+    });
+    update();
+  })();
+
+  // Enter im Eingabefeld = Senden
+  [["r_src", "b_send1"], ["r_dst", "b_send1"], ["r_ip", "b_send1"], ["r_sip", "b_send1"], ["a_src", "b_send2"], ["a_dst", "b_send2"], ["a_mac", "b_send2"]]
+    .forEach(function (p) { $(p[0]).addEventListener("keydown", function (e) { if (e.key === "Enter") $(p[1]).click(); }); });
+
+  reset();
+  window.__sim = { fill: function (id, v) { $(id).value = v; } };
+})();
+</script>
+</body>
+</html>

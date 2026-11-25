@@ -3,934 +3,563 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mission: Nachricht 1</title>
+<title>Mitschnitt am Switch</title>
 <style>
   :root {
-    --bg: #eef1f5; --panel: #ffffff; --ink: #16202b; --muted: #5b6876; --line: #d5dce4;
-    --cable: #9aa6b2; --blue: #1558d6; --blue-soft: #e5eefd; --ok: #17794a; --ok-soft: #e3f4ea;
-    --bad: #b3261e; --bad-soft: #fdecea; --req: #d9480f; --rep: #17794a;
-    --gold: #a86b00; --gold-soft: #fff6dd;
+    --bg: #eef1f5; --panel: #fff; --ink: #16202b; --muted: #5b6876; --line: #d5dce4; --soft: #f4f6f9;
+    --blue: #1558d6; --blue-soft: #e5eefd; --ok: #17794a; --ok-soft: #e3f4ea; --bad: #b3261e; --bad-soft: #fdecea;
+    --arp: #c2410c; --arp-soft: #fff1e7; --ip: #1558d6; --gold-soft: #fff6dd;
+    --f-dst: #dbe7ff; --f-src: #d8f1e2; --f-typ: #ffe7b3; --f-dat: #eceff3; --f-pad: #f7f8fa;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body { background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-         display: grid; grid-template-rows: auto minmax(0, 1fr); }
-  @media (max-width: 1099px), (max-height: 679px) { html, body { height: auto; } }
-  button { font: inherit; cursor: pointer; }
+         display: grid; grid-template-rows: auto minmax(0, 1fr); font-size: 15px; }
+  @media (max-width: 1099px), (max-height: 659px) { html, body { height: auto; } }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
   [hidden] { display: none !important; }
   .mono { font-family: var(--mono); }
 
-  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 21px; white-space: nowrap; }
-  .stepper { display: flex; gap: 4px; flex: 1; min-width: 0; flex-wrap: wrap; }
-  .stepper span { font-size: 13px; font-weight: 700; padding: 5px 11px; border-radius: 999px; color: var(--muted); background: #e2e7ed; white-space: nowrap; }
-  .stepper span.on { background: var(--blue); color: #fff; }
-  .stepper span.done { background: var(--ok-soft); color: var(--ok); }
-  .hbtn { border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; padding: 6px 9px; border-radius: 8px; display: inline-flex; gap: 6px; align-items: center; }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 18px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; flex: 1; min-width: 300px; }
+  .prog { font-weight: 700; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .bar { width: 120px; height: 8px; border-radius: 99px; background: #dde3ea; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ok); transition: width .4s; }
+  .hbtn { border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; padding: 6px 9px; border-radius: 8px; }
   .hbtn:hover { background: #e2e7ed; color: var(--ink); }
-  .insight-btn { background: var(--gold-soft); color: var(--gold); border: 1.5px solid #ecd28c; }
-  .insight-btn b { font-variant-numeric: tabular-nums; }
-  .insight-btn.pop { animation: pop .6s; }
-  @keyframes pop { 30% { transform: scale(1.18); } }
 
-  main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(400px, 1fr); gap: 14px; padding: 0 20px 16px; min-height: 0; }
+  main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(380px, 1fr); gap: 14px; padding: 0 18px 14px; min-height: 0; }
   @media (max-width: 1099px) { main { grid-template-columns: 1fr; } }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; }
+  .col.left { overflow: hidden; }
+  .scrollpart { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; flex: 1; }
+  @media (max-width: 1099px), (max-height: 659px) { .col.left { overflow: visible; } .scrollpart { overflow: visible; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  .card > h2, .chead h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .02em; }
+  .chead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px 8px; flex-wrap: wrap; }
 
-  .net { position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-  .net svg { width: 100%; flex: 1; min-height: 0; display: block; }
-  @media (max-width: 1099px) { .net svg { height: 56vw; flex: none; } }
-  .narr { margin: 0 12px 12px; border-radius: 12px; background: #16202b; color: #fff; padding: 13px 16px; display: flex; gap: 14px; align-items: center; min-height: 66px; transition: background .25s; }
-  .narr .txt { flex: 1; font-size: 16.5px; line-height: 1.45; }
-  .narr .txt b { color: #ffd28a; }
-  .narr .txt .mono { color: #9fc1ff; }
-  .narr .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  .narr button { border: 0; border-radius: 9px; padding: 9px 15px; font-weight: 700; font-size: 15px; background: #2d3a48; color: #fff; white-space: nowrap; }
-  .narr button.primary { background: #fff; color: var(--ink); }
-  .narr button:hover { filter: brightness(1.12); }
-  .narr.predict { background: #0d3a8c; }
-  .narr.predict .q { font-weight: 700; margin-bottom: 8px; }
-  .narr.predict .opts { display: flex; gap: 8px; flex-wrap: wrap; }
-  .narr.predict .opts button { background: #fff; color: #0d3a8c; text-align: left; line-height: 1.25; }
-  .narr.predict .opts button small { display: block; font-weight: 500; color: var(--muted); }
-  .narr.good { background: #0f5233; } .narr.badn { background: #7d1a14; }
-  .narr.good .txt .mono, .narr.badn .txt .mono { color: #fff; }
-
-  .side { display: flex; flex-direction: column; min-height: 0; overflow: auto; padding: 16px 18px; gap: 12px; }
-  .who { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--blue); }
-  .who::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--blue); }
-  .side h2 { margin: 2px 0 0; font-size: 22px; }
-  .side p.lead { margin: 0; font-size: 16px; line-height: 1.45; color: #2b3540; }
-
-  .frame { border: 2px solid var(--ink); border-radius: 14px; overflow: hidden; flex-shrink: 0; }
-  .frame .ftitle { background: var(--ink); color: #fff; font-weight: 700; font-size: 14px; padding: 6px 12px; display: flex; justify-content: space-between; }
-  .frame .ftitle span { opacity: .7; font-weight: 600; }
-  .frame .hdr { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px dashed var(--line); }
-  .frame .hdr > div { padding: 9px 10px; min-width: 0; }
-  .frame .hdr > div + div { border-left: 2px dashed var(--line); }
-  .flabel { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 5px; }
-  .frame .body { padding: 10px 12px 12px; background: #f6f8fb; font-size: 16px; line-height: 1.4; }
-  .frame .body .flabel { margin-bottom: 7px; }
-  .frame .body .rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; }
-  .frame .body .rows > span { white-space: nowrap; }
-
-  .slot { position: relative; min-height: 44px; border: 2px dashed #b4bfcb; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-          padding: 4px 8px; color: #8792a0; font-size: 13px; line-height: 1.25; background: #fff; text-align: center; transition: background .15s, border-color .15s; cursor: pointer; }
-  .slot.can { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
-  .slot.over { border-style: solid; background: #d3e2fd; }
-  .slot.miss { border-color: var(--bad); background: var(--bad-soft); animation: shake .35s; }
-  .slot.filled { border-style: solid; border-color: var(--ink); color: var(--ink); justify-content: space-between; gap: 6px; padding: 4px 6px 4px 10px; text-align: left; }
-  .slot.filled .v { font-family: var(--mono); font-size: 15px; font-weight: 700; white-space: nowrap; }
-  .slot.filled .c { display: block; font-size: 11px; color: var(--muted); font-weight: 600; font-family: system-ui, sans-serif; }
-  .slot .x { border: 0; background: #eef1f5; color: var(--muted); border-radius: 6px; width: 24px; height: 24px; font-size: 14px; line-height: 1; padding: 0; flex-shrink: 0; }
-  .slot .kb { border: 0; background: transparent; color: var(--blue); font-weight: 700; font-size: 12.5px; padding: 2px 4px; text-decoration: underline; white-space: nowrap; }
-  .slot .ph { pointer-events: none; }
-  .seg { display: inline-flex; align-items: center; gap: 0; font-family: var(--mono); font-size: 14.5px; color: var(--ink); }
-  .seg input { width: 2.3ch; font: inherit; font-weight: 700; text-align: center; text-transform: uppercase; border: 0; border-bottom: 2px solid var(--blue);
-               background: var(--blue-soft); border-radius: 4px 4px 0 0; padding: 3px 0; outline: none; }
-  .seg input:focus { background: #cfe0fd; }
-  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-
-  .tray { border-radius: 14px; background: #f3f5f8; padding: 10px 12px 12px; flex-shrink: 0; }
-  .tray .flabel { display: flex; justify-content: space-between; gap: 8px; }
-  .tray .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; border-radius: 10px; background: #fff; border: 2px solid var(--ink);
-          padding: 5px 10px 6px; display: inline-flex; flex-direction: column; line-height: 1.2; box-shadow: 0 1px 0 rgba(0,0,0,.08); transition: transform .12s, box-shadow .12s; }
-  .chip:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-  .chip .c { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-  .chip .v { font-family: var(--mono); font-weight: 700; font-size: 15px; }
-  .chip.ip { border-color: var(--blue); } .chip.ip .v { color: var(--blue); }
-  .chip.learned { border-style: dashed; border-color: var(--ok); } .chip.learned .c { color: var(--ok); }
-  .chip.cache { border-color: var(--ok); background: var(--ok-soft); } .chip.cache .c { color: var(--ok); }
-  .chip.locked { border-color: #c3cad3; background: #f0f2f5; cursor: not-allowed; }
-  .chip.locked .v, .chip.locked .c { color: #9aa4af; }
-  .chip.sel { outline: 3px solid var(--blue); outline-offset: 2px; }
-  .chip.term { border-color: var(--gold); background: var(--gold-soft); } .chip.term .v { font-family: inherit; font-size: 16px; color: #6a4300; }
-  .ghost { position: fixed; z-index: 1000; pointer-events: none; transform: translate(-50%, -60%) rotate(-3deg); box-shadow: 0 12px 28px rgba(0,0,0,.25); margin: 0; }
-  .chip.shake { animation: shake .35s; }
-
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .btn { border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 16px; border: 2px solid var(--ink); background: #fff; color: var(--ink); }
-  .btn.primary { background: var(--ink); color: #fff; }
-  .btn.soft { border-color: var(--line); color: var(--muted); font-size: 15px; }
-  .btn:disabled { opacity: .35; cursor: default; }
-  .note { border-radius: 10px; padding: 10px 12px; font-size: 15px; line-height: 1.45; flex-shrink: 0; }
-  .note.tip { background: var(--gold-soft); border: 1px solid #ecd28c; }
-  .note.err { background: var(--bad-soft); border: 1px solid #f0b4ae; color: #6c1611; }
-  .note.ok { background: var(--ok-soft); border: 1px solid #a9dcc0; color: #0f5233; }
-  .toast { position: fixed; left: 50%; top: 58px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 10px;
-           font-size: 15px; z-index: 1100; max-width: min(560px, 92vw); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-
-  .zettel { border: 2px dashed #b4bfcb; border-radius: 14px; padding: 12px 14px; background: #fff; flex-shrink: 0; }
-  .zettel q { display: block; quotes: "„" "“"; background: var(--blue-soft); border-left: 5px solid var(--blue); border-radius: 0 8px 8px 0; padding: 8px 10px; font-size: 16px; margin: 8px 0; }
-  .zettel dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 16px; align-items: center; }
-  .zettel dt { font-weight: 700; color: var(--muted); }
-  .zettel dd { margin: 0; font-family: var(--mono); font-weight: 700; }
-  .zettel.small q { font-size: 15px; margin: 6px 0; } .zettel.small dl { font-size: 15px; } .zettel.small { padding: 10px 12px; }
-  .gap { display: inline-block; padding: 1px 10px; border: 2px solid var(--bad); border-radius: 7px; color: var(--bad); background: repeating-linear-gradient(45deg, var(--bad-soft) 0 7px, #fff 7px 14px); }
-
-  .targets { display: grid; gap: 8px; }
-  .target { display: grid; grid-template-columns: 1fr 180px; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; background: #fff; font-size: 15px; line-height: 1.35; }
-  .target .slot { min-height: 42px; }
-  .target.right { border-color: #a9dcc0; background: var(--ok-soft); }
-  .target .slot.filled { border-color: var(--ok); justify-content: center; }
-  .target .slot.filled .v { font-family: inherit; color: var(--ok); }
-
-  .overlay { position: fixed; inset: 0; background: rgba(16,24,33,.55); z-index: 900; display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 30px 16px; }
-  .sheet { background: #fff; border-radius: 18px; max-width: 1000px; width: 100%; padding: 26px 30px 28px; position: relative; }
-  .sheet h2 { margin: 0 0 4px; font-size: 26px; padding-right: 110px; }
-  .sheet .sub { color: var(--muted); margin: 0 0 18px; font-size: 15.5px; }
-  .sheet .close { position: absolute; top: 14px; right: 14px; border: 0; background: #eef1f5; border-radius: 10px; padding: 8px 12px; font-weight: 700; }
-  .ilist { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
-  .icard { border-radius: 14px; border: 2px solid #ecd28c; background: var(--gold-soft); padding: 12px 14px; font-size: 15px; line-height: 1.45; }
-  .icard b.t { display: block; font-size: 16.5px; margin-bottom: 3px; color: #6a4300; }
-  .icard.lockedcard { border-style: dashed; border-color: #cfd6de; background: #f6f8fa; color: #9aa4af; }
-  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
-  @media (max-width: 800px) { .flow { grid-template-columns: 1fr; } }
-  .step { border-radius: 16px; padding: 14px 16px; border: 2.5px solid; font-size: 15px; line-height: 1.5; }
-  .step .n { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; color: #fff; font-weight: 800; margin-right: 8px; }
-  .step h3 { margin: 0 0 2px; font-size: 19px; display: flex; align-items: center; }
-  .step .k { font-size: 13px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; margin: 0 0 8px; }
-  .step.s1 { border-color: var(--req); } .step.s1 .n { background: var(--req); } .step.s1 .k { color: var(--req); }
-  .step.s2 { border-color: var(--rep); } .step.s2 .n { background: var(--rep); } .step.s2 .k { color: var(--rep); }
-  .step.s3 { border-color: var(--blue); } .step.s3 .n { background: var(--blue); } .step.s3 .k { color: var(--blue); }
-  .step .ex { margin-top: 8px; font-family: var(--mono); font-size: 13px; background: #f3f5f8; border-radius: 8px; padding: 7px 9px; line-height: 1.5; white-space: pre; overflow-x: auto; }
-  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  @media (max-width: 800px) { .facts { grid-template-columns: 1fr; } }
-  .fact { background: #f3f5f8; border-radius: 12px; padding: 11px 13px; font-size: 15px; line-height: 1.45; }
-  .fact b { display: block; }
-  .sheet .actions { margin-top: 18px; }
-  @media print {
-    @page { size: A4 landscape; margin: 12mm; }
-    body > *:not(.overlay) { display: none !important; }
-    body { background: #fff; display: block; }
-    .overlay { position: static; background: none; padding: 0; display: block; }
-    .sheet { padding: 0; max-width: none; }
-    .sheet .close, .sheet .actions { display: none !important; }
-    .step, .fact, .icard { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-
-  .cable { stroke: var(--cable); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s; }
+  /* Netz */
+  .net { flex-shrink: 0; }
+  .net svg { display: block; width: 100%; height: auto; max-height: 36vh; }
+  .caption { margin: 0 12px 12px; border-radius: 10px; background: var(--soft); padding: 9px 12px; font-size: 15px; line-height: 1.4; min-height: 40px; }
+  .cable { stroke: #9aa6b2; stroke-width: 6; fill: none; stroke-linejoin: round; }
   .cable.hot { stroke: var(--blue); stroke-width: 9; }
   .pcb { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
-  .pc.actor .pcb { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 4; }
-  .t-name { font-size: 25px; font-weight: 800; fill: var(--ink); }
-  .t-ip { font-size: 18px; font-weight: 700; fill: var(--blue); font-family: var(--mono); }
-  .t-mac { font-size: 16px; fill: var(--ink); font-family: var(--mono); }
-  .t-lab { font-size: 13px; font-weight: 800; fill: var(--muted); letter-spacing: .05em; }
-  .t-cache { font-size: 15px; font-family: var(--mono); fill: var(--ok); font-weight: 700; }
-  .t-cache.bad { fill: var(--bad); }
-  .t-empty { font-size: 14px; fill: #9aa4af; font-style: italic; }
-  .youtag rect { fill: var(--blue); } .youtag text { fill: #fff; font-size: 14px; font-weight: 800; }
-  .swb { fill: #16202b; }
-  .t-sw { font-size: 24px; font-weight: 800; fill: #fff; }
-  .t-swrow { font-size: 15px; fill: #cfd8e3; font-family: var(--mono); }
-  .t-swrow.port { fill: #fff; font-weight: 800; font-family: system-ui, sans-serif; }
-  .swrow-bg { fill: transparent; transition: fill .3s; } .swrow-bg.flash { fill: #2e6b4c; } .swrow-bg.look { fill: #2c4f8f; }
-  .t-port { font-size: 16px; font-weight: 800; fill: var(--ink); }
-  .badge text { font-size: 16px; font-weight: 800; fill: #fff; }
-  .pkt text { font-weight: 800; fill: #fff; }
-  .pkt text.to { font-size: 12.5px; font-weight: 700; fill: var(--ink); font-family: var(--mono); }
+  .t-name { font-size: 22px; font-weight: 800; }
+  .t-ip { font-size: 17px; font-weight: 700; fill: var(--blue); font-family: var(--mono); }
+  .t-mac { font-size: 16px; font-family: var(--mono); }
+  .t-sw { font-size: 21px; font-weight: 800; fill: #fff; }
+  .t-swl { font-size: 12px; font-weight: 800; fill: #8ea0b4; letter-spacing: .05em; }
+  .t-swr { font-size: 14.5px; fill: #cfd8e3; font-family: var(--mono); }
+  .t-swp { font-size: 14.5px; fill: #fff; font-weight: 800; }
+  .t-port { font-size: 15px; font-weight: 800; }
+  .badge text { font-size: 15px; font-weight: 800; fill: #fff; }
+  .pkt text { font-size: 13px; font-weight: 800; fill: #fff; }
+
+  /* Mitschnitt */
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tabs button:disabled { opacity: .45; cursor: not-allowed; }
+  .filter { font-size: 12.5px; color: var(--muted); padding: 0 14px 6px; font-family: var(--mono); }
+  table.cap { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.cap th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 800; padding: 5px 8px; background: var(--soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.cap td { padding: 6px 8px; border-bottom: 1px solid #edf0f4; white-space: nowrap; font-family: var(--mono); font-size: 13.5px; }
+  table.cap td.info { font-family: inherit; font-size: 14px; white-space: normal; }
+  table.cap tr.row { cursor: pointer; }
+  table.cap tr.row:hover td { background: #f3f7ff; }
+  table.cap tr.row.arp td:first-child { box-shadow: inset 4px 0 var(--arp); }
+  table.cap tr.row.ipv4 td:first-child { box-shadow: inset 4px 0 var(--ip); }
+  table.cap tr.row.sel td { background: var(--blue-soft); }
+  .capwrap { overflow-x: auto; padding-bottom: 6px; }
+
+  /* Details */
+  .detail { padding-bottom: 12px; }
+  .detail .empty { padding: 4px 14px 6px; color: var(--muted); }
+  .fields { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) auto minmax(0, 1fr); margin: 0 14px; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; }
+  .fields > div { padding: 7px 9px; border-left: 1px solid rgba(0,0,0,.15); min-width: 0; cursor: default; }
+  .fields > div:first-child { border-left: 0; }
+  .fields .k { font-size: 11.5px; font-weight: 800; color: #3d4955; text-transform: uppercase; letter-spacing: .03em; }
+  .fields .k small { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  .fields .v { font-family: var(--mono); font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .f-dst { background: var(--f-dst); } .f-src { background: var(--f-src); } .f-typ { background: var(--f-typ); } .f-dat { background: var(--f-dat); }
+  .sub { margin: 8px 14px 0; border-radius: 10px; background: var(--f-dat); padding: 8px 12px; }
+  .sub .st { font-size: 12px; font-weight: 800; color: #3d4955; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+  .sub table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .sub td { padding: 3px 6px 3px 0; vertical-align: top; }
+  .sub td:first-child { color: var(--muted); width: 150px; white-space: nowrap; }
+  .sub td.mono { font-weight: 700; }
+  .sub tr.hl td { background: #fff7d6; }
+  .dtools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 14px 0; }
+  .btn { border-radius: 9px; padding: 8px 14px; font-weight: 700; font-size: 14.5px; border: 2px solid var(--ink); background: #fff; color: var(--ink); }
+  .btn.primary { background: var(--ink); color: #fff; }
+  .btn.soft { border-color: var(--line); color: var(--muted); }
+  .btn.small { padding: 5px 10px; font-size: 13.5px; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .hex { margin: 10px 14px 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: var(--soft); border-radius: 10px; padding: 8px 10px; overflow-x: auto; }
+  .hex .r { white-space: nowrap; }
+  .hex .o { color: #9aa4af; margin-right: 10px; }
+  .hex b { font-weight: 600; padding: 1px 2px; border-radius: 3px; margin-right: 2px; }
+  .hex b.dst { background: var(--f-dst); } .hex b.src { background: var(--f-src); } .hex b.typ { background: var(--f-typ); } .hex b.dat { background: var(--f-dat); } .hex b.pad { color: #b0b8c1; }
+  .hex b.hl { outline: 2px solid var(--ink); }
+  .hexleg { font-family: system-ui, sans-serif; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  /* Aufgaben */
+  .tasks { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .intro { font-size: 15px; line-height: 1.5; background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+  .task { border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+  .task h3 { margin: 0; font-size: 15.5px; display: flex; gap: 8px; align-items: baseline; }
+  .task h3 .n { color: var(--blue); }
+  .task.done { background: #fbfdfc; border-color: #bfe3cf; }
+  .task.done h3 .n { color: var(--ok); }
+  .task.locked { opacity: .5; }
+  .task.locked .body { display: none; }
+  .task .body { margin-top: 8px; font-size: 15px; line-height: 1.45; }
+  .task p { margin: 6px 0; }
+  .q { margin: 10px 0 4px; font-weight: 600; }
+  select, input[type=text] { border: 2px solid var(--line); border-radius: 8px; padding: 6px 8px; background: #fff; font-size: 15px; }
+  select:focus, input:focus { outline: none; border-color: var(--blue); }
+  input[type=text] { font-family: var(--mono); width: 170px; }
+  .checks { display: flex; gap: 6px; flex-wrap: wrap; }
+  .checks label { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; user-select: none; }
+  .checks input { width: 16px; height: 16px; }
+  .opts { display: grid; gap: 6px; }
+  .opts label { display: flex; gap: 8px; align-items: flex-start; border: 2px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+  .opts input { margin-top: 3px; }
+  .fb { margin-top: 10px; border-radius: 9px; padding: 9px 11px; line-height: 1.45; }
+  .fb.ok { background: var(--ok-soft); color: #0f5233; } .fb.err { background: var(--bad-soft); color: #6c1611; }
+  .fb b.term { background: #fff; border-radius: 5px; padding: 0 5px; }
+  .row-act { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .link { border: 0; background: var(--blue-soft); color: var(--blue); font-weight: 700; border-radius: 7px; padding: 2px 8px; font-size: 13.5px; }
+  .term-out { font-family: var(--mono); font-size: 13px; background: #101820; color: #d7e0ea; border-radius: 9px; padding: 9px 11px; white-space: pre; overflow-x: auto; line-height: 1.45; margin: 6px 0; }
+  .term-out .pr { color: #8fd18f; }
+  .result { border: 2px solid var(--ok); border-radius: 12px; padding: 12px 14px; background: #fbfdfc; }
+  .result h3 { margin: 0 0 8px; font-size: 17px; color: var(--ok); }
+  .steps3 { display: grid; gap: 8px; margin: 8px 0; }
+  .steps3 div { border-radius: 9px; padding: 8px 10px; background: var(--soft); line-height: 1.45; }
+  .steps3 b.t { display: block; }
+  .done-frame { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); border: 2px solid var(--ink); border-radius: 9px; overflow: hidden; font-size: 13px; margin: 6px 0; }
+  .done-frame > div { padding: 5px 7px; border-left: 1px solid rgba(0,0,0,.15); }
+  .done-frame > div:first-child { border-left: 0; }
+  .done-frame .k { font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: #3d4955; }
+  .done-frame .v { font-family: var(--mono); font-weight: 700; white-space: nowrap; }
+  @keyframes flash { 0% { background: #fff3c4; } 100% { background: transparent; } }
+  .flash { animation: flash 1.2s; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Mission: Nachricht 1</h1>
-  <div class="stepper" id="stepper"></div>
-  <button class="hbtn insight-btn" id="insBtn" title="Deine Erkenntnisse">★ Erkenntnisse <b id="insCount">0/5</b></button>
-  <button class="hbtn" id="autoBtn" title="Erklärungen automatisch weiterlaufen lassen">▶ Auto: aus</button>
+  <h1>Mitschnitt am Switch: Wie kommt PC 1 an die MAC von PC 3?</h1>
+  <div class="prog"><span id="progTxt">Aufgabe 1 von 7</span><span class="bar"><i id="progBar" style="width:0%"></i></span></div>
   <button class="hbtn" id="resetBtn">↺ Neu starten</button>
   <button class="hbtn" id="fsBtn"></button>
 </header>
-
 <main>
-  <section class="card net">
-    <svg id="svg" viewBox="0 0 1000 660" preserveAspectRatio="xMidYMid meet" aria-label="Netz mit vier PCs und einem Switch"></svg>
-    <div class="narr" id="narr"><div class="txt" id="narrTxt"></div><div class="btns" id="narrBtns"></div></div>
-  </section>
-  <section class="card side" id="side"></section>
+  <div class="col left">
+    <section class="card net">
+      <div class="chead"><h2>Das Netz</h2><span style="font-size:13px;color:var(--muted)">MAC‑Tabelle des Switches wie nach dem Rollenspiel</span></div>
+      <svg id="svg" viewBox="0 0 1000 390" aria-label="Netz mit vier PCs und einem Switch"></svg>
+      <div class="caption" id="caption">Öffne unten eine Nachricht aus dem Mitschnitt und spiel ihren Weg ab.</div>
+    </section>
+    <div class="scrollpart" id="scrollpart">
+    <section class="card">
+      <div class="chead"><h2>Mitschnitt</h2><div class="tabs" id="tabs"></div></div>
+      <div class="filter" id="filter"></div>
+      <div class="capwrap"><table class="cap"><thead><tr><th>Nr.</th><th>Zeit</th><th>Ziel‑MAC</th><th>Quell‑MAC</th><th>Typ</th><th>Info</th></tr></thead><tbody id="capBody"></tbody></table></div>
+    </section>
+    <section class="card detail" id="detail"></section>
+    </div>
+  </div>
+  <div class="col">
+    <section class="card tasks" id="tasks"></section>
+  </div>
 </main>
 
 <script>
 (function () {
   "use strict";
-  /* =================== Daten =================== */
-  var BC = "FF:FF:FF:FF:FF:FF";
-  var PCS = [
-    { id: 1, port: 2, ip: "192.168.1.101", mac: "00:1B:44:11:3A:B7", x: 845, y: 118 },
-    { id: 2, port: 4, ip: "192.168.1.102", mac: "3C:52:82:6E:0F:14", x: 845, y: 542 },
-    { id: 3, port: 1, ip: "192.168.1.103", mac: "00:1B:44:2C:91:E5", x: 155, y: 118 },
-    { id: 4, port: 3, ip: "192.168.1.104", mac: "F4:8E:38:A0:57:C2", x: 155, y: 542 }
-  ];
-  PCS.forEach(function (p) { p.name = "PC " + p.id; });
-  var SW = { x: 500, y: 330, w: 340, h: 200 };
-  var PORTXY = { 1: [SW.x - SW.w / 2, SW.y - 55], 2: [SW.x + SW.w / 2, SW.y - 55], 3: [SW.x - SW.w / 2, SW.y + 55], 4: [SW.x + SW.w / 2, SW.y + 55] };
-  function pc(id) { return PCS[id - 1]; }
-  function pcByPort(n) { return PCS.filter(function (p) { return p.port === n; })[0]; }
-  function pcByMac(x) { return PCS.filter(function (p) { return p.mac === x; })[0]; }
+  var BC = "FF:FF:FF:FF:FF:FF", ZERO = "00:00:00:00:00:00";
+  var PCS = {
+    1: { id: 1, port: 2, ip: "192.168.1.101", mac: "00:1B:44:11:3A:B7", x: 870, y: 62 },
+    2: { id: 2, port: 4, ip: "192.168.1.102", mac: "3C:52:82:6E:0F:14", x: 870, y: 328 },
+    3: { id: 3, port: 1, ip: "192.168.1.103", mac: "00:1B:44:2C:91:E5", x: 130, y: 62 },
+    4: { id: 4, port: 3, ip: "192.168.1.104", mac: "F4:8E:38:A0:57:C2", x: 130, y: 328 }
+  };
+  var SWT = { "00:1B:44:2C:91:E5": 1, "00:1B:44:11:3A:B7": 2, "F4:8E:38:A0:57:C2": 3, "3C:52:82:6E:0F:14": 4 };
+  var SW = { x: 500, y: 195, w: 330, h: 170 };
+  var PORT = { 1: [SW.x - SW.w / 2, SW.y - 40], 2: [SW.x + SW.w / 2, SW.y - 40], 3: [SW.x - SW.w / 2, SW.y + 40], 4: [SW.x + SW.w / 2, SW.y + 40] };
+  function byPort(n) { for (var k in PCS) if (PCS[k].port === n) return PCS[k]; }
+  function byMac(m) { for (var k in PCS) if (PCS[k].mac === m) return PCS[k]; }
 
-  var INSIGHTS = [
-    { id: "bc", t: "Broadcast: eine Frage an alle", x: "Die An‑MAC <span class='mono'>FF:FF:FF:FF:FF:FF</span> bedeutet „an alle“. Der Switch verteilt den Rahmen an alle anderen Ports und <b>jeder</b> PC liest ihn." },
-    { id: "owner", t: "Nur der Gesuchte antwortet", x: "Alle lesen die Frage, aber nur der PC mit der gesuchten IP antwortet. Die anderen werfen sie weg." },
-    { id: "learn", t: "Der Gefragte lernt mit", x: "PC 3 kennt jetzt die MAC von PC 1: Sie stand als Von‑MAC in der Frage. Er merkt sie sich gleich." },
-    { id: "unicast", t: "Unicast: Antwort nur an einen", x: "Die Antwort geht gezielt an die MAC von PC 1. Der Switch kennt sie und leitet nur an Port 2 weiter (Forwarding)." },
-    { id: "cache", t: "Der ARP‑Cache merkt sich alles", x: "PC 1 speichert „IP → MAC“. Bei der nächsten Nachricht schaut er zuerst dort nach und muss nicht neu fragen." },
-    { id: "flood", t: "Flooding ist nicht „an alle“", x: "Kennt der Switch eine An‑MAC nicht, verteilt er den Rahmen an alle Ports. Die PCs werfen ihn aber weg, weil er nicht an sie adressiert ist.", bonus: true },
-    { id: "spoof", t: "ARP glaubt jedem", x: "ARP prüft nicht, wer antwortet. Ein Angreifer im LAN kann sich als anderer PC ausgeben und Nachrichten abfangen (ARP‑Spoofing).", bonus: true }
-  ];
-  var CORE = INSIGHTS.filter(function (i) { return !i.bonus; }).length;
-  var STEPS = ["Auftrag", "Frage", "Antwort", "Nachricht 1", "Begriffe", "Ergebnis"];
-
-  /* =================== Zustand =================== */
-  var S = null;
-  function fresh() {
-    return {
-      level: 0, tip: 0, found: {}, auto: S ? S.auto : false, busy: false, err: null,
-      sw: { "00:1B:44:2C:91:E5": 1, "00:1B:44:11:3A:B7": 2, "F4:8E:38:A0:57:C2": 3, "3C:52:82:6E:0F:14": 4 },
-      caches: { 1: {}, 2: {}, 3: {}, 4: {} }, bad: {},
-      slots: {}, sel: null, typing: null, replyBC: false, terms: {}, sentOnce: false, spoofed: false
-    };
-  }
-
-  /* =================== Hilfen =================== */
-  function $(id) { return document.getElementById(id); }
-  function h(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function m(x) { return "<span class='mono'>" + x + "</span>"; }
-  var toastT;
-  function toast(msg) {
-    var t = document.querySelector(".toast"); if (!t) { t = h("div", "toast"); document.body.appendChild(t); }
-    t.innerHTML = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 4200);
-  }
-
-  /* =================== Erkenntnisse =================== */
-  function gain(id) {
-    if (S.found[id]) return;
-    S.found[id] = true; updateIns();
-    var b = $("insBtn"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
-    var it = INSIGHTS.filter(function (i) { return i.id === id; })[0];
-    toast("★ Neue Erkenntnis: <b>" + it.t + "</b>");
-  }
-  function updateIns() {
-    var n = INSIGHTS.filter(function (i) { return !i.bonus && S.found[i.id]; }).length;
-    $("insCount").textContent = n + "/" + CORE;
-  }
-  function overlay(inner) {
-    var ov = h("div", "overlay"); var sh = h("div", "sheet", "<button class='close'>Schließen ✕</button>" + inner);
-    ov.appendChild(sh); document.body.appendChild(ov);
-    function close() { ov.remove(); }
-    sh.querySelector(".close").onclick = close; ov.onclick = function (e) { if (e.target === ov) close(); };
-    return { sheet: sh, close: close };
-  }
-  function showInsights() {
-    var o = overlay("<h2>★ Deine Erkenntnisse</h2><p class='sub'>Das hast du im Netz selbst beobachtet. Verdeckte Karten deckst du im Lauf der Mission auf.</p>");
-    var l = h("div", "ilist");
-    INSIGHTS.forEach(function (i) {
-      if (i.bonus && !S.found[i.id]) return;
-      l.appendChild(S.found[i.id] ? h("div", "icard", "<b class='t'>" + i.t + "</b>" + i.x) : h("div", "icard lockedcard", "<b class='t'>? ? ?</b>Noch nicht entdeckt."));
-    });
-    o.sheet.appendChild(l);
-  }
-  $("insBtn").onclick = showInsights;
-
-  /* =================== Erzähler =================== */
-  var autoT = null;
-  function narrate(html, buttons, mode) {
-    buttons = buttons || [{ id: "next", label: "Weiter ▶", primary: true }];
-    $("narr").className = "narr" + (mode ? " " + mode : "");
-    $("narrTxt").innerHTML = html;
-    var bx = $("narrBtns"); bx.innerHTML = "";
-    clearTimeout(autoT);
-    return new Promise(function (res) {
-      var done = false;
-      function fin(id) { if (done) return; done = true; clearTimeout(autoT); bx.innerHTML = ""; res(id); }
-      buttons.forEach(function (b) {
-        var e = h("button", b.primary ? "primary" : "", b.label);
-        e.onclick = function () { fin(b.id); };
-        bx.appendChild(e);
-      });
-      if (S.auto && buttons.length === 1 && buttons[0].id === "next") autoT = setTimeout(function () { fin("next"); }, 3400);
-    });
-  }
-  function narrSay(html, mode) { $("narr").className = "narr" + (mode ? " " + mode : ""); $("narrTxt").innerHTML = html; $("narrBtns").innerHTML = ""; }
-  function predict(q, opts) {
-    $("narr").className = "narr predict";
-    $("narrTxt").innerHTML = "<div class='q'>🤔 " + q + "</div><div class='opts' id='opts'></div>";
-    $("narrBtns").innerHTML = "";
-    return new Promise(function (res) {
-      opts.forEach(function (o) {
-        var b = h("button", "", o.label + (o.sub ? "<small>" + o.sub + "</small>" : ""));
-        b.onclick = function () { res(o.id); }; $("opts").appendChild(b);
-      });
-    });
-  }
-  document.addEventListener("keydown", function (e) {
-    if ((e.key === "Enter" || e.key === " ") && !/INPUT|TEXTAREA|BUTTON/.test(e.target.tagName)) {
-      var p = $("narrBtns").querySelector("button.primary"); if (p) { e.preventDefault(); p.click(); }
-    }
-  });
-  $("autoBtn").onclick = function () {
-    S.auto = !S.auto; this.textContent = "▶ Auto: " + (S.auto ? "an" : "aus");
-    var p = $("narrBtns").querySelectorAll("button");
-    if (S.auto && p.length === 1 && /Weiter/.test(p[0].textContent)) p[0].click();
+  /* ---------- Mitschnitte ---------- */
+  function arp(op, from, sha, spa, tha, tpa) { return { kind: "arp", op: op, from: from, sha: sha, spa: spa, tha: tha, tpa: tpa }; }
+  function ipv4(from, dstMac, sip, dip, text, id) { return { kind: "ipv4", from: from, dstMac: dstMac, sip: sip, dip: dip, text: text, id: id }; }
+  var CAPS = {
+    mi: { name: "Mittwoch", filter: "Filter: nur Nachrichten von und an PC 1 und PC 3 · Mittwoch, 08:15 Uhr", rows: [
+      { nr: 17, t: "08:15:02,104", dst: BC, src: PCS[1].mac, m: arp(1, 1, PCS[1].mac, PCS[1].ip, ZERO, PCS[3].ip) },
+      { nr: 18, t: "08:15:02,105", dst: PCS[1].mac, src: PCS[3].mac, m: arp(2, 3, PCS[3].mac, PCS[3].ip, PCS[1].mac, PCS[1].ip) },
+      { nr: 19, t: "08:15:02,106", dst: PCS[3].mac, src: PCS[1].mac, m: ipv4(1, PCS[3].mac, PCS[1].ip, PCS[3].ip, "Ist der Drucker im 2. OG wieder online?", 0x1a2b) },
+      { nr: 23, t: "08:16:10,553", dst: PCS[3].mac, src: PCS[1].mac, m: ipv4(1, PCS[3].mac, PCS[1].ip, PCS[3].ip, "Danke! Ich schicke dir gleich den Druckauftrag.", 0x1a2c) }
+    ]},
+    fr: { name: "Freitag (Zusatz)", filter: "Filter: nur Nachrichten von und an PC 1, PC 3 und PC 4 · Freitag, 10:42 Uhr", rows: [
+      { nr: 40, t: "10:42:17,310", dst: BC, src: PCS[1].mac, m: arp(1, 1, PCS[1].mac, PCS[1].ip, ZERO, PCS[3].ip) },
+      { nr: 41, t: "10:42:17,311", dst: PCS[1].mac, src: PCS[3].mac, m: arp(2, 3, PCS[3].mac, PCS[3].ip, PCS[1].mac, PCS[1].ip) },
+      { nr: 42, t: "10:42:17,312", dst: PCS[1].mac, src: PCS[4].mac, m: arp(2, 4, PCS[4].mac, PCS[3].ip, PCS[1].mac, PCS[1].ip) },
+      { nr: 45, t: "10:42:18,020", dst: PCS[4].mac, src: PCS[1].mac, m: ipv4(1, PCS[4].mac, PCS[1].ip, PCS[3].ip, "Neues Passwort fuer den Drucker: Herbst2026!", 0x2b01) }
+    ]}
   };
 
-  /* =================== SVG =================== */
+  /* ---------- Bytes bauen ---------- */
+  function macB(m) { return m.split(":").map(function (x) { return parseInt(x, 16); }); }
+  function ipB(ip) { return ip.split(".").map(Number); }
+  function u16(n) { return [(n >> 8) & 255, n & 255]; }
+  function csum(a) { var s = 0; for (var i = 0; i < a.length; i += 2) s += (a[i] << 8) + (a[i + 1] || 0); while (s >> 16) s = (s & 0xffff) + (s >> 16); return (~s) & 0xffff; }
+  function build(r) {
+    var m = r.m, b = [].concat(macB(r.dst), macB(r.src)), f = [];
+    f.push({ id: "dst", s: 0, n: 6 }, { id: "src", s: 6, n: 6 }, { id: "typ", s: 12, n: 2 });
+    if (m.kind === "arp") {
+      b = b.concat([8, 6, 0, 1, 8, 0, 6, 4, 0, m.op], macB(m.sha), ipB(m.spa), macB(m.tha), ipB(m.tpa));
+      f.push({ id: "dat", s: 14, n: 28 }, { id: "op", s: 20, n: 2 }, { id: "sha", s: 22, n: 6 }, { id: "spa", s: 28, n: 4 }, { id: "tha", s: 32, n: 6 }, { id: "tpa", s: 38, n: 4 });
+      var pad = 60 - b.length; for (var i = 0; i < pad; i++) b.push(0);
+      f.push({ id: "pad", s: 42, n: pad });
+    } else {
+      var txt = Array.prototype.map.call(m.text, function (c) { return c.charCodeAt(0); });
+      var udp = [].concat(u16(50123), u16(5000), u16(8 + txt.length), [0, 0], txt);
+      var ip = [0x45, 0].concat(u16(20 + udp.length), u16(m.id), [0, 0, 128, 17, 0, 0], ipB(m.sip), ipB(m.dip));
+      var c = csum(ip); ip[10] = c >> 8; ip[11] = c & 255;
+      b = b.concat([8, 0], ip, udp);
+      f.push({ id: "dat", s: 14, n: b.length - 14 }, { id: "sip", s: 26, n: 4 }, { id: "dip", s: 30, n: 4 }, { id: "txt", s: 42, n: txt.length });
+    }
+    return { bytes: b, fields: f };
+  }
+  function hx(n) { return ("0" + n.toString(16).toUpperCase()).slice(-2); }
+  function typeOf(r) { return r.m.kind === "arp" ? "0x0806" : "0x0800"; }
+  function typeName(r) { return r.m.kind === "arp" ? "ARP" : "IPv4"; }
+  function info(r) {
+    var m = r.m;
+    if (m.kind === "arp") return m.op === 1 ? "Wer hat " + m.tpa + "? Antwort an " + m.spa : m.spa + " ist bei " + m.sha;
+    return m.sip + " → " + m.dip + ": „" + m.text.replace("fuer", "für") + "“";
+  }
+
+  /* ---------- Zustand ---------- */
+  var S;
+  function fresh() { return { cap: "mi", sel: null, showHex: false, task: 0, done: {}, tries: {}, playing: false, frUnlocked: false }; }
+  function $(id) { return document.getElementById(id); }
+  function h(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+  /* ---------- Netzbild ---------- */
   var NS = "http://www.w3.org/2000/svg", svg = $("svg"), G = {};
-  function el(tag, a, parent) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); (parent || svg).appendChild(e); return e; }
-  function txt(parent, x, y, cls, s, anchor) { var t = el("text", { x: x, y: y, "class": cls, "text-anchor": anchor || "middle" }, parent); t.textContent = s; return t; }
-  function anchorOf(p) { return [p.x + (p.x < 500 ? 135 : -135), p.y + (p.y < 330 ? 55 : -55)]; }
-
-  function drawNet() {
-    svg.innerHTML = ""; G = { cables: {}, pcs: {}, badges: {}, caches: {} };
-    PCS.forEach(function (p) {
-      var a = anchorOf(p), q = PORTXY[p.port];
-      G.cables[p.port] = el("polyline", { points: a[0] + "," + a[1] + " " + q[0] + "," + a[1] + " " + q[0] + "," + q[1], fill: "none", "class": "cable" });
+  function el(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); (p || svg).appendChild(e); return e; }
+  function tx(p, x, y, cls, s, anc) { var t = el("text", { x: x, y: y, "class": cls, "text-anchor": anc || "middle" }, p); t.textContent = s; return t; }
+  function anchor(p) { return [p.x + (p.x < 500 ? 118 : -118), p.y]; }
+  function draw() {
+    svg.innerHTML = ""; G = { cab: {}, badge: {} };
+    [1, 2, 3, 4].forEach(function (id) {
+      var p = PCS[id], a = anchor(p), q = PORT[p.port], mx = (a[0] + q[0]) / 2;
+      G.cab[p.port] = el("polyline", { points: [a, [mx, a[1]], [mx, q[1]], q].map(function (z) { return z.join(","); }).join(" "), "class": "cable" });
+      tx(svg, q[0] + (q[0] < 500 ? -12 : 12), q[1] - 10, "t-port", "Port " + p.port, q[0] < 500 ? "end" : "start");
     });
-    var sg = el("g", {});
-    el("rect", { x: SW.x - SW.w / 2, y: SW.y - SW.h / 2, width: SW.w, height: SW.h, rx: 16, "class": "swb" }, sg);
-    txt(sg, SW.x, SW.y - SW.h / 2 + 34, "t-sw", "Switch");
-    var lab = txt(sg, SW.x - SW.w / 2 + 22, SW.y - SW.h / 2 + 60, "t-lab", "MAC‑TABELLE", "start"); lab.style.fill = "#8ea0b4";
-    Object.keys(PORTXY).forEach(function (n) {
-      var q = PORTXY[n];
-      el("rect", { x: q[0] - 9, y: q[1] - 13, width: 18, height: 26, rx: 4, fill: "#3a4756", stroke: "#dfe6ee", "stroke-width": 2 }, sg);
-      txt(svg, q[0] + (q[0] < 500 ? -14 : 14), q[1] + 6, "t-port", "Port " + n, q[0] < 500 ? "end" : "start");
+    el("rect", { x: SW.x - SW.w / 2, y: SW.y - SW.h / 2, width: SW.w, height: SW.h, rx: 14, fill: "#16202b" });
+    tx(svg, SW.x, SW.y - SW.h / 2 + 28, "t-sw", "Switch");
+    tx(svg, SW.x - SW.w / 2 + 18, SW.y - SW.h / 2 + 50, "t-swl", "MAC‑TABELLE", "start");
+    Object.keys(SWT).forEach(function (mac, i) {
+      var y = SW.y - SW.h / 2 + 72 + i * 24;
+      tx(svg, SW.x - SW.w / 2 + 18, y, "t-swr", mac, "start");
+      tx(svg, SW.x + SW.w / 2 - 18, y, "t-swp", "Port " + SWT[mac], "end");
     });
-    G.swg = el("g", {}, sg);
-    drawSwTable();
-    PCS.forEach(function (p) {
-      var g = el("g", { "class": "pc" }); G.pcs[p.id] = g;
-      el("rect", { x: p.x - 135, y: p.y - 95, width: 270, height: 190, rx: 14, "class": "pcb" }, g);
-      txt(g, p.x - 115, p.y - 58, "t-name", p.name, "start");
-      txt(g, p.x - 115, p.y - 31, "t-ip", p.ip, "start");
-      txt(g, p.x - 115, p.y - 8, "t-mac", p.mac, "start");
-      el("line", { x1: p.x - 115, x2: p.x + 115, y1: p.y + 8, y2: p.y + 8, stroke: "#d5dce4", "stroke-width": 1.5 }, g);
-      txt(g, p.x - 115, p.y + 30, "t-lab", "ARP‑CACHE", "start");
-      G.caches[p.id] = el("g", {}, g);
-      var yt = el("g", { "class": "youtag", opacity: 0 }, g); g.you = yt;
-      el("rect", { x: p.x + 52, y: p.y - 80, width: 68, height: 26, rx: 13 }, yt);
-      txt(yt, p.x + 86, p.y - 62, "", "DU");
-      var b = el("g", { "class": "badge", opacity: 0 }); G.badges[p.id] = b;
-      var by = p.y < 330 ? p.y + 120 : p.y - 120;
-      b.r = el("rect", { x: p.x - 125, y: by - 18, width: 250, height: 36, rx: 10 }, b);
-      b.t = txt(b, p.x, by + 6, "", "");
-    });
-    drawCaches(); setActor(null);
-  }
-  function drawSwTable(flash, look) {
-    G.swg.innerHTML = "";
-    var rows = Object.keys(S.sw).sort(function (a, b) { return S.sw[a] - S.sw[b]; });
-    rows.forEach(function (mac, i) {
-      var y = SW.y - SW.h / 2 + 72 + i * 28;
-      el("rect", { x: SW.x - SW.w / 2 + 12, y: y, width: SW.w - 24, height: 25, rx: 5, "class": "swrow-bg" + (mac === flash ? " flash" : "") + (mac === look ? " look" : "") }, G.swg);
-      txt(G.swg, SW.x - SW.w / 2 + 24, y + 18, "t-swrow", mac, "start");
-      txt(G.swg, SW.x + SW.w / 2 - 24, y + 18, "t-swrow port", "Port " + S.sw[mac], "end");
+    Object.keys(PORT).forEach(function (n) { var q = PORT[n]; el("rect", { x: q[0] - 8, y: q[1] - 11, width: 16, height: 22, rx: 3, fill: "#3a4756", stroke: "#dfe6ee", "stroke-width": 2 }); });
+    [1, 2, 3, 4].forEach(function (id) {
+      var p = PCS[id];
+      el("rect", { x: p.x - 118, y: p.y - 52, width: 236, height: 104, rx: 12, "class": "pcb" });
+      tx(svg, p.x - 100, p.y - 18, "t-name", "PC " + id, "start");
+      tx(svg, p.x - 100, p.y + 8, "t-ip", p.ip, "start");
+      tx(svg, p.x - 100, p.y + 32, "t-mac", p.mac, "start");
+      var b = el("g", { "class": "badge", opacity: 0 }); G.badge[id] = b;
+      var by = p.y < 195 ? p.y + 74 : p.y - 74;
+      b.r = el("rect", { x: p.x - 105, y: by - 15, width: 210, height: 30, rx: 9 }, b);
+      b.t = tx(b, p.x, by + 5, "", "");
     });
   }
-  function drawCaches() {
-    PCS.forEach(function (p) {
-      var g = G.caches[p.id]; g.innerHTML = "";
-      var c = S.caches[p.id], ks = Object.keys(c);
-      if (!ks.length) { txt(g, p.x - 115, p.y + 56, "t-empty", "leer", "start"); return; }
-      var ip = ks[ks.length - 1], bad = S.bad[p.id + ip];
-      txt(g, p.x - 115, p.y + 54, "t-cache" + (bad ? " bad" : ""), ip + " →", "start");
-      txt(g, p.x - 115, p.y + 76, "t-cache" + (bad ? " bad" : ""), c[ip], "start");
-    });
-  }
-  function setActor(id) { PCS.forEach(function (p) { G.pcs[p.id].classList.toggle("actor", p.id === id); G.pcs[p.id].you.setAttribute("opacity", p.id === id ? 1 : 0); }); }
-  function badge(id, s, color) { var b = G.badges[id]; b.t.textContent = s; b.r.setAttribute("fill", color); b.setAttribute("opacity", 1); }
-  function clearBadges() { PCS.forEach(function (p) { G.badges[p.id].setAttribute("opacity", 0); }); }
-  function hot(port, on) { G.cables[port].classList.toggle("hot", on); }
-
-  function packet(kind, to) {
-    var col = { req: "#d9480f", rep: "#17794a", evil: "#b3261e", msg: "#1558d6" }[kind];
-    var lab = { req: "?", rep: "!", evil: "!", msg: "✉" }[kind];
+  function badge(id, s, c) { var b = G.badge[id]; b.t.textContent = s; b.r.setAttribute("fill", c); b.setAttribute("opacity", 1); }
+  function clearBadges() { for (var k in G.badge) G.badge[k].setAttribute("opacity", 0); }
+  function pkt(col, lab) {
     var g = el("g", { "class": "pkt" });
-    el("rect", { x: -34, y: -22, width: 68, height: 44, rx: 7, fill: col, stroke: "#fff", "stroke-width": 3 }, g);
-    el("path", { d: "M-32,-19 L0,3 L32,-19", fill: "none", stroke: "rgba(255,255,255,.55)", "stroke-width": 2 }, g);
-    var t = txt(g, 0, 13, "", lab); t.setAttribute("font-size", "24");
-    if (to) { el("rect", { x: -92, y: 27, width: 184, height: 22, rx: 6, fill: "#fff", stroke: col, "stroke-width": 1.5 }, g); txt(g, 0, 43, "to", "an " + to); }
-    return g;
+    el("rect", { x: -30, y: -18, width: 60, height: 36, rx: 6, fill: col, stroke: "#fff", "stroke-width": 3 }, g);
+    tx(g, 0, 5, "", lab); return g;
   }
-  function route(p, inbound) {
-    var a = anchorOf(p), q = PORTXY[p.port];
-    var pts = [a, [q[0], a[1]], q, [SW.x, SW.y]];
-    return inbound ? pts : pts.slice().reverse();
-  }
-  function moveAlong(g, pts, ms) {
-    var segs = [], total = 0;
-    for (var i = 1; i < pts.length; i++) { var d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); segs.push(d); total += d; }
+  function route(p, inb) { var a = anchor(p), q = PORT[p.port], mx = (a[0] + q[0]) / 2; var pts = [a, [mx, a[1]], [mx, q[1]], q, [SW.x, SW.y]]; return inb ? pts : pts.slice().reverse(); }
+  function move(g, pts, ms) {
+    var seg = [], tot = 0; for (var i = 1; i < pts.length; i++) { var d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); tot += d; }
     return new Promise(function (res) {
       var t0 = null;
       function f(ts) {
-        if (!t0) t0 = ts; var k = Math.min(1, (ts - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, d = e * total, j = 0;
-        while (j < segs.length - 1 && d > segs[j]) { d -= segs[j]; j++; }
-        var r = segs[j] ? Math.min(1, d / segs[j]) : 1, x = pts[j][0] + (pts[j + 1][0] - pts[j][0]) * r, y = pts[j][1] + (pts[j + 1][1] - pts[j][1]) * r;
-        g.setAttribute("transform", "translate(" + x + "," + y + ")");
+        if (!t0) t0 = ts; var k = Math.min(1, (ts - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, d = e * tot, j = 0;
+        while (j < seg.length - 1 && d > seg[j]) { d -= seg[j]; j++; }
+        var r = seg[j] ? Math.min(1, d / seg[j]) : 1;
+        g.setAttribute("transform", "translate(" + (pts[j][0] + (pts[j + 1][0] - pts[j][0]) * r) + "," + (pts[j][1] + (pts[j + 1][1] - pts[j][1]) * r) + ")");
         if (k < 1) requestAnimationFrame(f); else res();
       }
       requestAnimationFrame(f);
     });
   }
-
-  /* =================== Netz-Logik =================== */
-  function decide(dst, inPort) {
-    var others = [1, 2, 3, 4].filter(function (n) { return n !== inPort; });
-    if (dst === BC) return { act: "flood", ports: others };
-    if (S.sw[dst] !== undefined) return S.sw[dst] === inPort ? { act: "drop", ports: [] } : { act: "fwd", ports: [S.sw[dst]] };
-    return { act: "flood", ports: others, unknown: true };
+  async function play(r) {
+    if (S.playing) return; S.playing = true; renderDetail(); clearBadges();
+    var from = PCS[r.m.from], col = r.m.kind === "arp" ? "#c2410c" : "#1558d6", lab = "Nr. " + r.nr;
+    $("caption").textContent = "Nr. " + r.nr + " verlässt PC " + from.id + " und kommt an Port " + from.port + " an …";
+    var g = pkt(col, lab); G.cab[from.port].classList.add("hot");
+    await move(g, route(from, true), 1100); G.cab[from.port].classList.remove("hot"); g.remove();
+    var others = [1, 2, 3, 4].filter(function (n) { return n !== from.port; });
+    var out = r.dst === BC || SWT[r.dst] === undefined ? others : [SWT[r.dst]];
+    await Promise.all(out.map(function (n) { var gg = pkt(col, lab); G.cab[n].classList.add("hot"); return move(gg, route(byPort(n), false), 1100).then(function () { G.cab[n].classList.remove("hot"); gg.remove(); }); }));
+    var acc = [], rej = [];
+    out.slice().sort(function (a, b) { return byPort(a).id - byPort(b).id; }).forEach(function (n) { var p = byPort(n); if (r.dst === BC || r.dst === p.mac) { acc.push(p.id); badge(p.id, "angenommen", "#17794a"); } else { rej.push(p.id); badge(p.id, "verworfen", "#8a96a3"); } });
+    function list(a) { return a.map(function (i) { return "PC " + i; }).join(", ").replace(/, ([^,]*)$/, " und $1"); }
+    $("caption").innerHTML = "<b>Nr. " + r.nr + ":</b> Der Switch schickt die Nachricht an " + (out.length > 1 ? "Port " + out.join(", ").replace(/, ([^,]*)$/, " und $1") : "Port " + out[0]) + ". " +
+      (acc.length ? list(acc) + (acc.length > 1 ? " nehmen" : " nimmt") + " sie an." : "") + (rej.length ? " " + list(rej) + (rej.length > 1 ? " verwerfen" : " verwirft") + " sie." : "");
+    S.playing = false; renderDetail();
   }
-  async function travel(frame, sender, kind, guess) {
-    var g = packet(kind, frame.dst); hot(sender.port, true);
-    await moveAlong(g, route(sender, true), 1300); hot(sender.port, false);
-    var known = S.sw[frame.src] === sender.port;
-    S.sw[frame.src] = sender.port; drawSwTable(frame.src);
-    await narrate("Der Rahmen kommt an <b>Port " + sender.port + "</b> an. Der Switch liest die Von‑MAC " + m(frame.src) + (known ? ". Die steht schon bei Port " + sender.port + " in seiner Tabelle." : " und trägt sie bei <b>Port " + sender.port + "</b> ein."));
-    var d = decide(frame.dst, sender.port);
-    drawSwTable(null, d.act !== "flood" || d.unknown ? frame.dst : null);
-    var why;
-    if (d.act === "flood" && !d.unknown) why = "Die An‑MAC " + m(BC) + " heißt „an alle“. Der Switch verteilt den Rahmen an <b>alle anderen Ports</b> (" + d.ports.join(", ") + ").";
-    else if (d.act === "flood") why = "Die An‑MAC " + m(frame.dst) + " steht nicht in der Tabelle. Der Switch weiß nicht wohin und verteilt den Rahmen an <b>alle anderen Ports</b> (Flooding).";
-    else if (d.act === "fwd") why = "Die An‑MAC " + m(frame.dst) + " steht in der Tabelle bei <b>Port " + d.ports[0] + "</b>. Der Switch schickt den Rahmen nur dorthin (Forwarding).";
-    else why = "Die An‑MAC " + m(frame.dst) + " liegt an Port " + sender.port + ". Von dort kam der Rahmen. Der Switch schickt nichts zurück und <b>wirft ihn weg</b>.";
-    narrSay(why);
-    if (d.ports.length) {
-      var copies = d.ports.map(function (n) { hot(n, true); return { g: packet(kind, frame.dst), n: n }; });
-      g.remove();
-      await Promise.all(copies.map(function (o) { return moveAlong(o.g, route(pcByPort(o.n), false), 1300).then(function () { hot(o.n, false); o.g.remove(); }); }));
-    } else {
-      g.style.transition = "opacity .6s"; g.style.opacity = 0; await new Promise(function (r) { setTimeout(r, 650); }); g.remove();
-    }
-    drawSwTable();
-    var verdict = guess ? (guess === d.act ? "<br>✅ Deine Vermutung stimmt!" : "<br>❌ Du hattest etwas anderes vermutet. Lies genau, warum.") : "";
-    await narrate(why + verdict, null, guess ? (guess === d.act ? "good" : "badn") : "");
-    var acc = [];
-    d.ports.forEach(function (n) {
-      var p = pcByPort(n);
-      if (frame.dst === BC || frame.dst === p.mac) acc.push(p);
-      else badge(p.id, "nicht an mich → weg", "#8a96a3");
+
+  /* ---------- Mitschnitt-Liste ---------- */
+  function renderTabs() {
+    var t = $("tabs"); t.innerHTML = "";
+    ["mi", "fr"].forEach(function (k) {
+      var b = h("button", S.cap === k ? "on" : "", CAPS[k].name);
+      b.disabled = k === "fr" && !S.frUnlocked;
+      if (b.disabled) b.title = "Wird nach Aufgabe 7 freigeschaltet";
+      b.onclick = function () { S.cap = k; S.sel = null; clearBadges(); $("caption").textContent = "Öffne eine Nachricht aus dem Mitschnitt und spiel ihren Weg ab."; renderAll(); };
+      t.appendChild(b);
     });
-    return { acc: acc, d: d };
+    $("filter").textContent = CAPS[S.cap].filter;
   }
-  function askSwitch() {
-    return predict("Was macht der Switch mit diesem Rahmen?", [
-      { id: "fwd", label: "Nur an einen Port", sub: "Forwarding" },
-      { id: "flood", label: "An alle anderen Ports", sub: "Flooding" },
-      { id: "drop", label: "Wegwerfen", sub: "geht nicht weiter" }
-    ]);
+  function renderCap() {
+    var tb = $("capBody"); tb.innerHTML = "";
+    CAPS[S.cap].rows.forEach(function (r) {
+      var tr = h("tr", "row " + r.m.kind + (S.sel === r.nr ? " sel" : ""));
+      tr.innerHTML = "<td>" + r.nr + "</td><td>" + r.t + "</td><td>" + r.dst + "</td><td>" + r.src + "</td><td>" + typeOf(r) + "</td><td class='info'>" + info(r) + "</td>";
+      tr.onclick = function () { openMsg(r.nr); };
+      tb.appendChild(tr);
+    });
+  }
+  function rowByNr(nr) { var all = CAPS.mi.rows.concat(CAPS.fr.rows); return all.filter(function (r) { return r.nr === nr; })[0]; }
+  function openMsg(nr, andPlay) {
+    var r = rowByNr(nr); S.cap = CAPS.mi.rows.indexOf(r) >= 0 ? "mi" : "fr"; S.sel = nr; clearBadges();
+    $("caption").textContent = "Nr. " + nr + " ist geöffnet. Mit ▶ siehst du ihren Weg im Netz.";
+    renderAll(); var d = $("detail"); d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash");
+    d.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (andPlay) play(r);
   }
 
-  /* =================== Drag & Drop =================== */
-  function makeChip(c) {
-    var e = h("div", "chip " + c.kind + (c.cls ? " " + c.cls : ""), "<span class='c'>" + (c.locked ? "🔒 " : "") + c.cap + "</span><span class='v'>" + c.label + "</span>");
-    e._c = c; e.tabIndex = 0;
-    e.addEventListener("pointerdown", function (ev) { startDrag(ev, e); });
-    e.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); clickChip(e); } });
-    if (S.sel && S.sel.cap === c.cap && S.sel.value === c.value) e.classList.add("sel");
-    return e;
-  }
-  function startDrag(ev, chipEl) {
-    if (S.busy || ev.button > 0) return;
-    ev.preventDefault();
-    var c = chipEl._c, sx = ev.clientX, sy = ev.clientY, moved = false, ghost = null, over = null;
-    function sel() { return ".slot[data-kind='" + c.type + "']"; }
-    function mv(e) {
-      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return;
-      if (!moved) {
-        moved = true;
-        if (c.locked) { end(); lockMsg(chipEl); return; }
-        ghost = chipEl.cloneNode(true); ghost.classList.add("ghost"); ghost.classList.remove("sel"); document.body.appendChild(ghost);
-        document.querySelectorAll(sel()).forEach(function (s) { s.classList.add("can"); });
-      }
-      ghost.style.left = e.clientX + "px"; ghost.style.top = e.clientY + "px";
-      var t = document.elementFromPoint(e.clientX, e.clientY), s = t && t.closest ? t.closest(sel()) : null;
-      if (over && over !== s) over.classList.remove("over");
-      over = s; if (s) s.classList.add("over");
-    }
-    function up() {
-      if (!moved) { end(); clickChip(chipEl); return; }
-      var target = over; end();
-      if (target) fillSlot(target.dataset.slot, c);
-    }
-    function end() {
-      document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", end);
-      if (ghost) ghost.remove();
-      document.querySelectorAll(".slot.can, .slot.over").forEach(function (s) { s.classList.remove("can", "over"); });
-    }
-    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", end);
-  }
-  function lockMsg(chipEl) { chipEl.classList.remove("shake"); void chipEl.offsetWidth; chipEl.classList.add("shake"); toast("🔒 " + chipEl._c.lockMsg); }
-  function clickChip(chipEl) {
-    var c = chipEl._c;
-    if (S.busy) return;
-    if (c.locked) return lockMsg(chipEl);
-    if (S.sel && S.sel.cap === c.cap && S.sel.value === c.value) { S.sel = null; return render(); }
-    var free = document.querySelectorAll(".slot[data-kind='" + c.type + "']:not(.filled)");
-    if (free.length) { fillSlot(free[0].dataset.slot, c); return; }
-    S.sel = c; render();
-    document.querySelectorAll(".slot[data-kind='" + c.type + "']").forEach(function (s) { s.classList.add("can"); });
-    toast("Alle passenden Felder sind voll. Tippe auf das Feld, das du ersetzen willst.");
-  }
-  function fillSlot(id, c) {
-    if (c.type === "term") return dropTerm(id, c);
-    S.slots[id] = { v: c.value, cap: c.cap };
-    S.sel = null; S.typing = null; S.err = null; render();
-  }
-  function slotEl(id, kind, ph, canType) {
-    var s = h("div", "slot"); s.dataset.slot = id; s.dataset.kind = kind;
-    var f = S.slots[id];
-    if (f) {
-      s.classList.add("filled");
-      s.innerHTML = "<span><span class='c'>" + f.cap + "</span><span class='v'>" + f.v + "</span></span>";
-      var x = h("button", "x", "✕"); x.title = "Karte herausnehmen";
-      x.onclick = function (e) { e.stopPropagation(); if (S.busy) return; delete S.slots[id]; render(); };
-      s.appendChild(x);
-    } else if (S.typing === id) {
-      s.appendChild(segInput(id)); s.style.justifyContent = "flex-start"; s.style.padding = "4px 5px";
+  /* ---------- Details ---------- */
+  var DESC = { dst: "Ziel‑MAC", src: "Quell‑MAC", typ: "Typ", dat: "Daten", op: "Art", sha: "Absender‑MAC", spa: "Absender‑IP", tha: "Empfänger‑MAC", tpa: "Empfänger‑IP", sip: "Absender‑IP", dip: "Empfänger‑IP", txt: "Inhalt", pad: "Füllbytes" };
+  function renderDetail() {
+    var d = $("detail"); d.innerHTML = "";
+    var r = S.sel && rowByNr(S.sel);
+    var head = h("div", "chead", "<h2>" + (r ? "Nachricht Nr. " + r.nr + " <span style='font-weight:600;color:var(--muted)'>· " + r.t + " · " + build(r).bytes.length + " Byte</span>" : "Nachricht") + "</h2>");
+    d.appendChild(head);
+    if (!r) { d.appendChild(h("div", "empty", "Klick oben eine Zeile im Mitschnitt an. Dann siehst du hier, was in der Nachricht steht.")); return; }
+    var B = build(r), m = r.m;
+    var fl = h("div", "fields");
+    function cell(cls, k, small, v, id) { var c = h("div", cls, "<div class='k'>" + k + " <small>" + small + "</small></div><div class='v'>" + v + "</div>"); c.dataset.f = id; return c; }
+    fl.appendChild(cell("f-dst", "Ziel‑MAC", "6 Byte", r.dst, "dst"));
+    fl.appendChild(cell("f-src", "Quell‑MAC", "6 Byte", r.src, "src"));
+    fl.appendChild(cell("f-typ", "Typ", "2 Byte", typeOf(r) + "<div style='font-weight:500;font-family:system-ui,sans-serif;font-size:13px'>" + typeName(r) + "</div>", "typ"));
+    fl.appendChild(cell("f-dat", "Daten", (B.bytes.length - 14) + " Byte", m.kind === "arp" ? "siehe unten" : "IP‑Paket, siehe unten", "dat"));
+    d.appendChild(fl);
+    var sub = h("div", "sub"), rows;
+    if (m.kind === "arp") {
+      sub.appendChild(h("div", "st", "Daten: ARP"));
+      rows = [["op", "Art", m.op === 1 ? "1 = Anfrage" : "2 = Antwort"], ["sha", "Absender‑MAC", m.sha], ["spa", "Absender‑IP", m.spa], ["tha", "Empfänger‑MAC", m.tha], ["tpa", "Empfänger‑IP", m.tpa]];
     } else {
-      s.innerHTML = "<span class='ph'>" + ph + "</span>";
-      if (canType) {
-        var kb = h("button", "kb", "⌨ tippen"); kb.title = "MAC‑Adresse selbst eintippen";
-        kb.onclick = function (e) { e.stopPropagation(); if (S.busy) return; S.typing = id; S.sel = null; render(); var i = document.querySelector(".seg input"); if (i) i.focus(); };
-        s.appendChild(kb); s.style.justifyContent = "space-between"; s.style.textAlign = "left";
+      sub.appendChild(h("div", "st", "Daten: IP‑Paket"));
+      rows = [["sip", "Absender‑IP", m.sip], ["dip", "Empfänger‑IP", m.dip], ["txt", "Inhalt", "„" + m.text.replace("fuer", "für") + "“"]];
+    }
+    var tb = h("table"); rows.forEach(function (x) { var tr = h("tr", "", "<td>" + x[1] + "</td><td class='" + (x[0] === "txt" || x[0] === "op" ? "" : "mono") + "'>" + x[2] + "</td>"); tr.dataset.f = x[0]; tb.appendChild(tr); });
+    sub.appendChild(tb); d.appendChild(sub);
+    var tools = h("div", "dtools");
+    var pb = h("button", "btn primary", S.playing ? "läuft …" : "▶ Weg im Netz abspielen"); pb.disabled = S.playing; pb.onclick = function () { play(r); }; tools.appendChild(pb);
+    var hb = h("button", "btn soft", S.showHex ? "Bytes ausblenden" : "Echte Bytes anzeigen"); hb.onclick = function () { S.showHex = !S.showHex; renderDetail(); }; tools.appendChild(hb);
+    d.appendChild(tools);
+    if (S.showHex) {
+      var hxEl = h("div", "hex"), cls = new Array(B.bytes.length);
+      B.fields.forEach(function (f) { if (["dst", "src", "typ", "dat", "pad"].indexOf(f.id) >= 0) for (var i = f.s; i < f.s + f.n; i++) cls[i] = f.id; });
+      for (var o = 0; o < B.bytes.length; o += 16) {
+        var line = "<span class='o'>" + ("000" + o.toString(16)).slice(-4) + "</span>";
+        for (var i = o; i < Math.min(o + 16, B.bytes.length); i++) line += "<b class='" + cls[i] + "' data-i='" + i + "'>" + hx(B.bytes[i]) + "</b>";
+        hxEl.appendChild(h("div", "r", line));
       }
-    }
-    s.addEventListener("click", function () { if (!S.busy && S.sel && S.sel.type === kind) fillSlot(id, S.sel); });
-    return s;
-  }
-  function segInput(id) {
-    var w = h("div", "seg"), ins = [];
-    for (var i = 0; i < 6; i++) {
-      if (i) w.appendChild(h("span", "", ":"));
-      var inp = h("input"); inp.maxLength = 12; inp.autocomplete = "off"; inp.spellcheck = false; inp.setAttribute("aria-label", "Byte " + (i + 1) + " von 6");
-      ins.push(inp); w.appendChild(inp);
-    }
-    function distribute(v, start) {
-      for (var k = start; k < 6 && v.length; k++) { ins[k].value = v.slice(0, 2); v = v.slice(2); }
-      var nxt = ins.filter(function (x) { return x.value.length < 2; })[0]; (nxt || ins[5]).focus(); check();
-    }
-    function check(force) {
-      if (ins.every(function (x) { return x.value.length === 2; })) {
-        S.slots[id] = { v: ins.map(function (x) { return x.value; }).join(":"), cap: "selbst getippt" }; S.typing = null; S.err = null; render();
-      } else if (force) toast("Eine MAC‑Adresse hat 6 Paare aus Hex‑Ziffern (0–9, A–F).");
-    }
-    ins.forEach(function (inp, i) {
-      inp.addEventListener("input", function () {
-        var v = inp.value.toUpperCase().replace(/[^0-9A-F]/g, "");
-        if (v.length > 2) { distribute(v, i); return; }
-        inp.value = v; if (v.length === 2 && i < 5) ins[i + 1].focus();
-        check();
+      hxEl.appendChild(h("div", "hexleg", "So geht die Nachricht wirklich über das Kabel (ohne Präambel und Prüfsumme). Fahr mit der Maus über ein Feld oben, dann siehst du seine Bytes."));
+      d.appendChild(hxEl);
+      var hover = function (id, on) {
+        var f = B.fields.filter(function (x) { return x.id === id; })[0]; if (!f) return;
+        for (var i = f.s; i < f.s + f.n; i++) { var e = hxEl.querySelector("b[data-i='" + i + "']"); if (e) e.classList.toggle("hl", on); }
+      };
+      d.querySelectorAll("[data-f]").forEach(function (e) {
+        e.addEventListener("mouseenter", function () { hover(e.dataset.f, true); if (e.tagName === "TR") e.classList.add("hl"); });
+        e.addEventListener("mouseleave", function () { hover(e.dataset.f, false); e.classList.remove("hl"); });
       });
-      inp.addEventListener("keydown", function (e) {
-        if (e.key === "Backspace" && !inp.value && i > 0) { e.preventDefault(); ins[i - 1].focus(); ins[i - 1].value = ins[i - 1].value.slice(0, 1); }
-        else if (e.key === "ArrowLeft" && i > 0 && inp.selectionStart === 0) ins[i - 1].focus();
-        else if (e.key === "ArrowRight" && i < 5 && inp.selectionStart === inp.value.length) ins[i + 1].focus();
-        else if (e.key === ":" || e.key === "-" || e.key === " " || e.key === ".") { e.preventDefault(); if (inp.value.length && i < 5) ins[i + 1].focus(); }
-        else if (e.key === "Escape") { S.typing = null; render(); }
-        else if (e.key === "Enter") { e.preventDefault(); check(true); }
-      });
-      inp.addEventListener("paste", function (e) { e.preventDefault(); distribute((e.clipboardData || window.clipboardData).getData("text").toUpperCase().replace(/[^0-9A-F]/g, ""), i); });
-      inp.addEventListener("click", function (e) { e.stopPropagation(); });
-    });
-    var cancel = h("button", "x", "✕"); cancel.title = "Abbrechen"; cancel.style.marginLeft = "4px";
-    cancel.onclick = function (e) { e.stopPropagation(); S.typing = null; render(); };
-    w.appendChild(cancel);
-    return w;
+    }
   }
 
-  /* =================== Rendering rechts =================== */
-  function stepper() {
-    var st = $("stepper"); st.innerHTML = "";
-    STEPS.forEach(function (s, i) { st.appendChild(h("span", i === S.level ? "on" : i < S.level ? "done" : "", (i < S.level ? "✓ " : "") + s)); });
-  }
-  function trayEl(title, chips) {
-    var t = h("div", "tray"); t.appendChild(h("div", "flabel", "<span>" + title + "</span><span style='text-transform:none;letter-spacing:0;font-weight:600'>ziehen oder antippen</span>"));
-    var c = h("div", "chips"); chips.forEach(function (x) { c.appendChild(makeChip(x)); }); t.appendChild(c); return t;
-  }
-  function frameEl(title, sub, hdr, bodyNodes) {
-    var f = h("div", "frame"); f.appendChild(h("div", "ftitle", title + "<span>" + sub + "</span>"));
-    var hd = h("div", "hdr");
-    hdr.forEach(function (x) { var d = h("div"); d.appendChild(h("div", "flabel", x[0])); d.appendChild(x[1]); hd.appendChild(d); });
-    f.appendChild(hd);
-    var b = h("div", "body"); b.appendChild(h("div", "flabel", "Inhalt"));
-    if (bodyNodes.length && Array.isArray(bodyNodes[0])) {
-      var r = h("div", "rows");
-      bodyNodes.forEach(function (row) { r.appendChild(h("span", "", row[0])); r.appendChild(row[1]); });
-      b.appendChild(r);
-    } else bodyNodes.forEach(function (n) { b.appendChild(typeof n === "string" ? h("div", "", n) : n); });
-    f.appendChild(b);
-    return f;
-  }
-  function button(label, cls, fn, disabled) { var b = h("button", "btn " + (cls || ""), label); b.onclick = fn; b.disabled = !!disabled; return b; }
-  function render() {
-    stepper();
-    var side = $("side"), y = side.scrollTop; side.innerHTML = "";
-    [renderIntro, renderAsk, renderReply, renderSend, renderTerms, renderDone][S.level](side);
-    side.scrollTop = y;
-  }
+  /* ---------- Aufgaben ---------- */
+  function sel(id, opts) { return "<select id='" + id + "'><option value=''>bitte wählen</option>" + opts.map(function (o) { return "<option>" + o + "</option>"; }).join("") + "</select>"; }
+  function checks(id, opts) { return "<div class='checks' id='" + id + "'>" + opts.map(function (o) { return "<label><input type='checkbox' value='" + o + "'>" + o + "</label>"; }).join("") + "</div>"; }
+  function radios(id, opts) { return "<div class='opts' id='" + id + "'>" + opts.map(function (o) { return "<label><input type='radio' name='" + id + "' value='" + o + "'><span>" + o + "</span></label>"; }).join("") + "</div>"; }
+  function val(id) { var e = $(id); return e ? e.value : ""; }
+  function radio(id) { var e = document.querySelector("input[name='" + id + "']:checked"); return e ? e.value : ""; }
+  function checked(id) { return Array.prototype.slice.call(document.querySelectorAll("#" + id + " input:checked")).map(function (e) { return e.value; }).sort().join(","); }
+  function open(nr) { return "<button class='link' data-open='" + nr + "'>Nr. " + nr + " öffnen</button>"; }
+  function term(t) { return "<b class='term'>" + t + "</b>"; }
+  var ARP_BEFORE = "<span class='pr'>C:\\&gt;</span> arp -a\nKeine ARP-Einträge gefunden.";
+  var ARP_AFTER = "<span class='pr'>C:\\&gt;</span> arp -a\n\nSchnittstelle: 192.168.1.101 --- 0x7\n  Internetadresse       Physische Adresse     Typ\n  192.168.1.103         00-1b-44-2c-91-e5     dynamisch";
 
-  /* ---- 0 Auftrag ---- */
-  function renderIntro(side) {
-    side.appendChild(h("div", "who", "Deine Mission"));
-    side.appendChild(h("h2", "", "PC 1 will Nachricht 1 an PC 3 schicken"));
-    side.appendChild(h("div", "zettel", "<span class='flabel'>Nachricht 1</span><q>Ist der Drucker im 2. OG wieder online?</q><dl><dt>Von‑MAC</dt><dd>00:1B:44:11:3A:B7</dd><dt>An‑IP</dt><dd>192.168.1.103</dd><dt>An‑MAC</dt><dd><span class='gap'>??:??:??:??:??:??</span></dd></dl>"));
-    side.appendChild(h("p", "lead", "PC 1 kennt nur die <b>IP</b> von PC 3. Der Switch versteht aber nur <b>MAC‑Adressen</b>. Ohne An‑MAC kann Nachricht 1 nicht losgehen."));
-    side.appendChild(h("p", "lead", "<b>Deine Aufgabe:</b> Finde die MAC von PC 3 heraus, ohne zu schummeln. Du baust die Nachrichten selbst und siehst links, was im Netz passiert."));
-    var a = h("div", "actions"); a.appendChild(button("Mission starten ▶", "primary", function () { goLevel(1); })); side.appendChild(a);
-  }
-
-  /* ---- 1 Frage ---- */
-  var TIPS = [
-    "Stell dir vor, du bist neu im Großraumbüro und sollst einen Laptop zu Frau Huber bringen. Du kennst nur ihren Namen. Wie findest du sie?",
-    "Du weißt nicht, welcher PC die IP 192.168.1.103 hat. Also: An <b>wen</b> musst du die Frage schicken? Welche An‑MAC passt dazu?",
-    "Es gibt eine besondere MAC‑Adresse, die <b>jeder</b> PC annimmt: alle 48 Bit auf 1, also " + m("FF:FF:FF:FF:FF:FF") + ". Tippe sie bei der An‑MAC ein (⌨ tippen)."
+  var TASKS = [
+    { t: "Die Druckerfrage finden",
+      b: "<p>Im Mitschnitt stehen vier Nachrichten. Welche Nr. ist die Druckerfrage von PC 1 an PC 3?</p>" + sel("a1", ["17", "18", "19", "23"]),
+      check: function () {
+        var v = val("a1"); if (!v) return null;
+        if (v === "19") return [true, "Richtig. In Nr. 19 steht die MAC von PC 3 als Ziel‑MAC. PC 1 kannte sie beim Senden also schon. Davor laufen aber zwei andere Nachrichten über den Switch: Nr. 17 und Nr. 18. Die schauen wir uns jetzt an."];
+        if (v === "23") return [false, "Nr. 23 geht auch von PC 1 an PC 3, aber über eine Minute später. Lies die Spalte Info."];
+        return [false, "Lies die Spalte Info: In welcher Nachricht steht die Frage nach dem Drucker?"];
+      }, sol: function () { $("a1").value = "19"; } },
+    { t: "Nr. 17: An wen geht die Nachricht?",
+      b: "<p>" + open(17) + " Schau dir die Ziel‑MAC an.</p><p class='q'>Wem gehört die Ziel‑MAC von Nr. 17?</p>" + sel("a2a", ["PC 1", "PC 2", "PC 3", "PC 4", "keinem PC"]) +
+         "<p class='q'>Spiel den Weg von Nr. 17 ab. Welche PCs nehmen die Nachricht an?</p>" + checks("a2b", ["PC 1", "PC 2", "PC 3", "PC 4"]),
+      check: function () {
+        var a = val("a2a"), b = checked("a2b"); if (!a || !b) return null;
+        if (a !== "keinem PC") return [false, "Vergleiche die Ziel‑MAC mit den MAC‑Adressen der PCs im Netzbild und in der Tabelle des Switches."];
+        if (b !== "PC 2,PC 3,PC 4") return [false, (b.indexOf("PC 1") >= 0 ? "PC 1 ist der Absender. " : "") + "Spiel den Weg ab (▶) und achte auf die grünen Markierungen."];
+        return [true, "Richtig. " + "FF:FF:FF:FF:FF:FF gehört keinem Gerät. Trotzdem schickt der Switch die Nachricht an alle anderen Ports, und <b>alle</b> PCs nehmen sie an."];
+      }, sol: function () { $("a2a").value = "keinem PC"; document.querySelectorAll("#a2b input").forEach(function (e) { e.checked = e.value !== "PC 1"; }); } },
+    { t: "Was ist an FF:FF:FF:FF:FF:FF besonders?",
+      b: "<p class='q'>Rechne FF (hexadezimal) ins Binärsystem um:</p><input type='text' id='a3a' placeholder='8 Bit' autocomplete='off'>" +
+         "<p class='q'>Wie viele der 48 Bit dieser Ziel‑MAC sind also 1?</p><input type='text' id='a3b' placeholder='Anzahl' autocomplete='off' style='width:90px'>",
+      check: function () {
+        var a = val("a3a").replace(/\s/g, ""), b = val("a3b").trim(); if (!a || !b) return null;
+        if (a !== "11111111") return [false, "F = 15 = 1111. FF besteht aus zwei F."];
+        if (b !== "48") return [false, "Die MAC hat 6 Byte mit je 8 Bit. Jedes Byte ist FF."];
+        return [true, "Genau: Alle 48 Bit sind 1. Diese Sonderadresse heißt " + term("Broadcast‑Adresse") + ". Eine Nachricht an alle heißt " + term("Broadcast") + ". Jeder PC im LAN nimmt sie an, und der Switch verteilt sie immer an alle Ports."];
+      }, sol: function () { $("a3a").value = "11111111"; $("a3b").value = "48"; } },
+    { t: "Was fragt PC 1 in Nr. 17?",
+      b: "<p>" + open(17) + " Lies die Daten.</p><p class='q'>PC 1 sucht die MAC‑Adresse zu dieser IP:</p><input type='text' id='a4a' placeholder='IP‑Adresse' autocomplete='off'>" +
+         "<p class='q'>Bei Empfänger‑MAC steht 00:00:00:00:00:00. Warum?</p>" + radios("a4b", ["PC 1 kennt diese MAC noch nicht.", "PC 3 hat keine MAC‑Adresse.", "Das ist die MAC des Switches."]),
+      check: function () {
+        var a = val("a4a").trim(), b = radio("a4b"); if (!a || !b) return null;
+        if (a !== "192.168.1.103" && a !== "103") return [false, "Schau in den Daten von Nr. 17 bei Empfänger‑IP."];
+        if (b.indexOf("kennt") < 0) return [false, "Was will PC 1 mit dieser Nachricht überhaupt herausfinden?"];
+        return [true, "Richtig. PC 1 fragt alle: „Wer hat 192.168.1.103? Antwort an 192.168.1.101.“ Die gesuchte MAC füllt er mit Nullen, weil er sie noch nicht kennt."];
+      }, sol: function () { $("a4a").value = "192.168.1.103"; document.querySelector("input[name='a4b']").checked = true; } },
+    { t: "Nr. 18: Die Antwort",
+      b: "<p>" + open(18) + " und spiel den Weg ab.</p><p class='q'>Wer antwortet?</p>" + sel("a5a", ["PC 1", "PC 2", "PC 3", "PC 4", "der Switch"]) +
+         "<p class='q'>An wen geht die Antwort?</p>" + sel("a5b", ["an alle", "nur an PC 1", "nur an den Switch"]) +
+         "<p class='q'>Woher kennt PC 3 die MAC‑Adresse von PC 1?</p>" + radios("a5c", ["Aus Nr. 17: Dort stand sie als Quell‑MAC und Absender‑MAC.", "Aus der MAC‑Tabelle des Switches.", "Sie ist in PC 3 fest eingestellt."]),
+      check: function () {
+        var a = val("a5a"), b = val("a5b"), c = radio("a5c"); if (!a || !b || !c) return null;
+        if (a !== "PC 3") return [false, "Schau bei Nr. 18 auf die Quell‑MAC."];
+        if (b !== "nur an PC 1") return [false, "Schau bei Nr. 18 auf die Ziel‑MAC und spiel den Weg ab."];
+        if (c.indexOf("Nr. 17") < 0) return [false, "Ein PC kann die Tabelle des Switches nicht lesen. Was hat PC 3 kurz vorher bekommen?"];
+        return [true, "Richtig. PC 3 hat die MAC von PC 1 aus Nr. 17 gelernt und antwortet gezielt nur ihm. Eine Nachricht an genau einen Empfänger heißt " + term("Unicast") + ". Der Switch leitet sie nur an Port 2 weiter."];
+      }, sol: function () { $("a5a").value = "PC 3"; $("a5b").value = "nur an PC 1"; document.querySelector("input[name='a5c']").checked = true; } },
+    { t: "Das Feld Typ",
+      b: "<p>Nr. 17 und 18 haben im Feld Typ den Wert 0x0806, Nr. 19 und 23 den Wert 0x0800.</p><p class='q'>Wofür sind die Nachrichten mit 0x0806 da?</p>" + sel("a6a", ["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"]) +
+         "<p class='q'>Und die mit 0x0800?</p>" + sel("a6b", ["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"]),
+      check: function () {
+        var a = val("a6a"), b = val("a6b"); if (!a || !b) return null;
+        if (a.indexOf("MAC") < 0 || b.indexOf("Daten") < 0) return [false, "Vergleiche, was in den Daten von Nr. 17 und Nr. 19 steht."];
+        return [true, "Richtig. 0x0800 steht für IPv4: Darin stecken die eigentlichen Daten. 0x0806 steht für " + term("ARP") + " (Address Resolution Protocol). ARP findet zu einer IP‑Adresse die MAC‑Adresse. Nr. 17 ist ein " + term("ARP‑Request") + ", Nr. 18 ein " + term("ARP‑Reply") + "."];
+      }, sol: function () { $("a6a").value = "um die MAC‑Adresse herauszufinden"; $("a6b").value = "um die eigentlichen Daten zu transportieren"; } },
+    { t: "Nr. 23: Warum keine neue Frage?",
+      b: "<p>Vor Nr. 23 gibt es keine ARP‑Nachricht. So sah die Ausgabe von <span class='mono'>arp -a</span> auf PC 1 aus:</p>" +
+         "<div style='font-size:13px;font-weight:700;color:var(--muted)'>um 08:15:01, vor Nr. 17</div><div class='term-out'>" + ARP_BEFORE + "</div>" +
+         "<div style='font-size:13px;font-weight:700;color:var(--muted)'>um 08:15:03, nach Nr. 18</div><div class='term-out'>" + ARP_AFTER + "</div>" +
+         "<p class='q'>Warum muss PC 1 vor Nr. 23 nicht fragen?</p>" + radios("a7", ["PC 1 hat sich die MAC von PC 3 aus Nr. 18 gemerkt.", "Der Switch hat die Nachricht automatisch umgeleitet.", "PC 3 hat sich vorher bei PC 1 gemeldet."]),
+      check: function () {
+        var a = radio("a7"); if (!a) return null;
+        if (a.indexOf("gemerkt") < 0) return [false, "Vergleiche die beiden Ausgaben von arp -a. Was ist dazugekommen?"];
+        return [true, "Richtig. PC 1 speichert die Antwort in seinem " + term("ARP‑Cache") + " (das zeigt arp -a). „dynamisch“ heißt: Der Eintrag verfällt nach einiger Zeit. Dann fragt PC 1 wieder."];
+      }, sol: function () { document.querySelector("input[name='a7']").checked = true; } }
   ];
-  function renderAsk(side) {
-    side.appendChild(h("div", "who", "Du bist PC 1"));
-    side.appendChild(h("h2", "", "Baue eine Frage ans Netz"));
-    side.appendChild(h("p", "lead", "Du suchst die MAC zur IP <b>192.168.1.103</b>. Zieh Karten in den Rahmen. Eine MAC, die du nicht als Karte hast, kannst du selbst tippen."));
-    side.appendChild(frameEl("Rahmen: Frage", "von PC 1",
-      [["Von‑MAC", slotEl("src", "mac", "Absender", true)], ["An‑MAC", slotEl("dst", "mac", "Empfänger", true)]],
-      [["Wer hat die IP", slotEl("ip", "ip", "IP hierher")], ["Antwort bitte an IP", slotEl("sip", "ip", "IP hierher")]]));
-    side.appendChild(trayEl("Das weiß PC 1", [
-      { type: "mac", kind: "mac", cap: "MAC von PC 1 (du)", label: pc(1).mac, value: pc(1).mac },
-      { type: "ip", kind: "ip", cap: "IP von PC 1 (du)", label: pc(1).ip, value: pc(1).ip },
-      { type: "ip", kind: "ip", cap: "IP von PC 3", label: pc(3).ip, value: pc(3).ip },
-      { type: "mac", kind: "mac", cls: "locked", locked: true, cap: "MAC von PC 3", label: "??:??:??:??:??:??", value: "", lockMsg: "Die MAC von PC 3 kennt PC 1 nicht. Genau die suchst du ja!" }
-    ]));
-    var a = h("div", "actions");
-    a.appendChild(button("Frage senden ▶", "primary", sendAsk, S.busy));
-    a.appendChild(button(S.tip >= TIPS.length ? "Alle Tipps offen" : "💡 Tipp " + (S.tip + 1), "soft", function () { S.tip++; render(); }, S.tip >= TIPS.length || S.busy));
-    side.appendChild(a);
-    if (S.err) side.appendChild(h("div", "note err", S.err));
-    if (S.tip) side.appendChild(h("div", "note tip", TIPS.slice(0, S.tip).map(function (t, i) { return "<b>Tipp " + (i + 1) + ":</b> " + t; }).join("<br><br>")));
-  }
-  function missing(ids) {
-    var miss = ids.filter(function (i) { return !S.slots[i]; });
-    miss.forEach(function (i) { var s = document.querySelector(".slot[data-slot='" + i + "']"); if (s) s.classList.add("miss"); });
-    if (miss.length) toast("Im Rahmen fehlt noch etwas (rot markiert).");
-    return miss.length > 0;
-  }
-  async function sendAsk() {
-    if (S.busy) return; S.err = null;
-    if (missing(["src", "dst", "ip", "sip"])) return;
-    var src = S.slots.src.v, dst = S.slots.dst.v, ip = S.slots.ip.v, sip = S.slots.sip.v, me = pc(1);
-    if (src !== me.mac) { S.err = "Bei <b>Von‑MAC</b> steht immer die <b>eigene</b> MAC des Absenders. Die setzt die Netzwerkkarte automatisch ein."; return render(); }
-    var o = pcByMac(dst);
-    if (o && o.id !== 1) { S.err = "Woher soll PC 1 die MAC von " + o.name + " kennen? Er kennt nur seine eigene. Nicht schummeln!"; return render(); }
-    if (ip === me.ip) { S.err = "Du fragst nach deiner eigenen IP. Wessen MAC suchst du?"; return render(); }
-    if (sip !== me.ip) { S.err = "Die Antwort soll zu dir zurück. Bei „antworte an IP“ gehört deine eigene IP hin."; return render(); }
-    S.busy = true; render(); clearBadges(); setActor(1);
-    var guess = await askSwitch();
-    var r = await travel({ src: src, dst: dst }, me, "req", guess);
-    S.busy = false;
-    if (!r.acc.length) {
-      if (r.d.act === "flood") {
-        gain("flood");
-        await narrate("Alle PCs haben den Rahmen bekommen, aber <b>keiner nimmt ihn an</b>: Die An‑MAC " + m(dst) + " gehört keinem von ihnen. Ein PC liest nur Rahmen an seine eigene MAC oder an „alle“.", [{ id: "x", label: "Nochmal bauen", primary: true }], "badn");
-        if (S.tip < 2) S.tip = 2;
-      } else {
-        await narrate("Deine Frage ist bei niemandem angekommen.", [{ id: "x", label: "Nochmal bauen", primary: true }], "badn");
+  var EXTRA = { t: "Zusatz: Mitschnitt vom Freitag",
+    b: "<p>Am Freitag beschwert sich PC 3: Die Nachricht von PC 1 kam nie an. Der Admin hat wieder mitgeschnitten. Wechsle oben zum Mitschnitt <b>Freitag</b>.</p>" +
+       "<p class='q'>Welche Nachricht ist verdächtig?</p>" + sel("x1", ["40", "41", "42", "45"]) +
+       "<p class='q'>Was ist passiert?</p>" + radios("x2", ["PC 4 hat sich als 192.168.1.103 ausgegeben. PC 1 schickt die Nachricht deshalb an PC 4.", "Der Switch hat Nr. 45 an den falschen Port geschickt.", "PC 3 hat zu langsam geantwortet und wurde übersprungen."]),
+    check: function () {
+      var a = val("x1"), b = radio("x2"); if (!a || !b) return null;
+      if (a !== "42") return [false, "Vergleiche die Absender‑IP und die Absender‑MAC in den Daten der beiden Antworten."];
+      if (b.indexOf("PC 4 hat") < 0) return [false, "Schau bei Nr. 45: Zu welcher IP soll sie, und an welche MAC geht sie?"];
+      return [true, "Richtig. Nr. 42 ist eine gefälschte Antwort: PC 4 behauptet, 192.168.1.103 zu sein. ARP prüft das nicht. PC 1 überschreibt seinen ARP‑Cache, und Nr. 45 mit dem Passwort landet bei PC 4. Das nennt man " + term("ARP‑Spoofing") + "."];
+    }, sol: function () { $("x1").value = "42"; document.querySelector("input[name='x2']").checked = true; } };
+
+  function renderTasks() {
+    var box = $("tasks"); box.innerHTML = "";
+    box.appendChild(h("div", "intro", "<b>Die Lage:</b> Ein Admin hat am Switch mitgeschnitten, während PC 1 die Druckerfrage an PC 3 geschickt hat. Damals kannte PC 1 die MAC von PC 3 noch nicht. Finde heraus, wie PC 1 an die MAC gekommen ist.<br><span style='color:var(--muted)'>Klick eine Zeile im Mitschnitt an, um die Nachricht zu öffnen. Mit ▶ siehst du ihren Weg im Netz.</span>"));
+    var list = TASKS.slice(); if (S.done[TASKS.length - 1]) list.push(EXTRA);
+    list.forEach(function (T, i) {
+      var isExtra = T === EXTRA, done = S.done[i], locked = i > S.task && !done;
+      var c = h("div", "task" + (done ? " done" : "") + (locked ? " locked" : ""));
+      c.appendChild(h("h3", "", "<span class='n'>" + (done ? "✓" : "") + (isExtra ? "" : " Aufgabe " + (i + 1)) + "</span> " + T.t));
+      if (isExtra && i === S.task && !done) c.querySelector("h3").innerHTML = "<span class='n'>★</span> " + T.t;
+      var body = h("div", "body");
+      if (done) body.innerHTML = "<div class='fb ok'>" + S.done[i] + "</div>";
+      else if (!locked) {
+        body.innerHTML = T.b;
+        var act = h("div", "row-act"), chk = h("button", "btn primary small", "Prüfen");
+        chk.onclick = function () {
+          var r = T.check(); var fb = c.querySelector(".fb.live") || h("div", "fb live"); body.appendChild(fb);
+          if (!r) { fb.className = "fb live err"; fb.textContent = "Bitte beantworte alle Teile."; return; }
+          if (r[0]) {
+            S.done[i] = r[1]; S.task = i + 1;
+            if (i === TASKS.length - 1) S.frUnlocked = true;
+            renderAll();
+            var next = $("tasks").querySelectorAll(".task")[Math.min(i + 1, $("tasks").querySelectorAll(".task").length - 1)];
+            if (next) next.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          } else {
+            S.tries[i] = (S.tries[i] || 0) + 1; fb.className = "fb live err"; fb.innerHTML = r[1];
+            if (S.tries[i] >= 2 && !c.querySelector(".solbtn")) {
+              var sb = h("button", "btn soft small solbtn", "Lösung zeigen"); sb.onclick = function () { T.sol(); chk.click(); }; act.appendChild(sb);
+            }
+          }
+        };
+        act.insertBefore(chk, act.firstChild); body.appendChild(act);
       }
-      clearBadges(); narrSay("Ändere deinen Rahmen und sende nochmal. Die Tipps rechts helfen dir."); return render();
-    }
-    r.acc.forEach(function (p) { if (p.ip === ip) badge(p.id, "Das bin ich!", "#17794a"); else badge(p.id, "nicht meine IP → weg", "#8a96a3"); });
-    gain("bc");
-    await narrate("Alle PCs lesen deine Frage. PC 2 und PC 4: „Nicht meine IP“ → weg. <b>PC 3</b>: „192.168.1.103, das bin ich!“");
-    gain("owner");
-    S.caches[3][me.ip] = me.mac; drawCaches();
-    await narrate("PC 3 merkt sich nebenbei, wer gefragt hat: " + m(me.ip) + " → " + m(me.mac) + ". Das stand ja in deiner Frage.");
-    gain("learn");
-    await narrate("Jetzt muss PC 3 antworten. <b>Ab jetzt bist du PC 3.</b>", [{ id: "n", label: "Ich bin PC 3 ▶", primary: true }]);
-    clearBadges(); goLevel(2);
-  }
-
-  /* ---- 2 Antwort ---- */
-  function renderReply(side) {
-    side.appendChild(h("div", "who", "Du bist PC 3"));
-    side.appendChild(h("h2", "", "Beantworte die Frage"));
-    side.appendChild(h("div", "zettel small", "<span class='flabel'>Bei dir angekommen</span><q>Wer hat die IP 192.168.1.103? Bitte antworte an IP 192.168.1.101.</q><dl><dt>Von‑MAC</dt><dd>00:1B:44:11:3A:B7</dd><dt>An‑MAC</dt><dd>FF:FF:FF:FF:FF:FF</dd></dl>"));
-    side.appendChild(frameEl("Rahmen: Antwort", "von PC 3",
-      [["Von‑MAC", slotEl("rsrc", "mac", "Absender", true)], ["An‑MAC", slotEl("rdst", "mac", "Empfänger", true)]],
-      [["Die IP", slotEl("rip", "ip", "IP hierher")], ["gehört zur MAC", slotEl("rmac", "mac", "MAC hierher", true)]]));
-    side.appendChild(trayEl("Das weiß PC 3", [
-      { type: "mac", kind: "mac", cap: "MAC von PC 3 (du)", label: pc(3).mac, value: pc(3).mac },
-      { type: "ip", kind: "ip", cap: "IP von PC 3 (du)", label: pc(3).ip, value: pc(3).ip },
-      { type: "mac", kind: "mac", cls: "learned", cap: "MAC von PC 1 · aus der Frage", label: pc(1).mac, value: pc(1).mac },
-      { type: "ip", kind: "ip", cls: "learned", cap: "IP von PC 1 · aus der Frage", label: pc(1).ip, value: pc(1).ip }
-    ]));
-    var a = h("div", "actions"); a.appendChild(button("Antwort senden ▶", "primary", sendReply, S.busy)); side.appendChild(a);
-    if (S.err) side.appendChild(h("div", "note err", S.err));
-  }
-  async function sendReply() {
-    if (S.busy) return; S.err = null;
-    if (missing(["rsrc", "rdst", "rip", "rmac"])) return;
-    var src = S.slots.rsrc.v, dst = S.slots.rdst.v, ip = S.slots.rip.v, mac = S.slots.rmac.v, me = pc(3);
-    if (src !== me.mac) { S.err = "Bei <b>Von‑MAC</b> steht immer die eigene MAC des Absenders. Du bist jetzt PC 3."; return render(); }
-    if (ip !== me.ip) { S.err = "PC 1 hat nach <b>192.168.1.103</b> gefragt. Um diese IP geht es in deiner Antwort."; return render(); }
-    var o = pcByMac(dst); if (o && o.id !== 1 && o.id !== 3) { S.err = "Woher soll PC 3 die MAC von " + o.name + " kennen? Nicht schummeln!"; return render(); }
-    S.busy = true; render(); clearBadges(); setActor(3);
-    var guess = await askSwitch();
-    var r = await travel({ src: src, dst: dst }, me, "rep", guess);
-    var got = r.acc.filter(function (p) { return p.id === 1; })[0];
-    r.acc.forEach(function (p) { if (p.id !== 1) badge(p.id, "nichts gefragt → weg", "#8a96a3"); });
-    S.busy = false;
-    if (!got) {
-      await narrate("Die Antwort ist <b>nicht bei PC 1</b> angekommen. An wen muss sie gehen? Und woher kennst du dessen MAC?", [{ id: "x", label: "Nochmal bauen", primary: true }], "badn");
-      clearBadges(); narrSay("Ändere die Antwort und sende nochmal."); return render();
-    }
-    S.replyBC = dst === BC;
-    badge(1, "Antwort gespeichert!", "#17794a");
-    S.caches[1][ip] = mac; S.bad["1" + ip] = mac !== me.mac; drawCaches();
-    if (!S.replyBC) gain("unicast");
-    await narrate("PC 1 hat die Antwort und trägt sie in seinen <b>ARP‑Cache</b> ein: " + m(ip) + " → " + m(mac) + "." +
-      (S.replyBC ? "<br>Übrigens: Deine Antwort ging an <b>alle</b>, obwohl PC 3 die MAC von PC 1 aus der Frage kannte. Das geht gezielter." : ""));
-    gain("cache");
-    if (S.replyBC) {
-      var c = await narrate("Willst du die Antwort gezielt nur an PC 1 schicken?", [{ id: "redo", label: "Ja, nochmal gezielt", primary: true }, { id: "go", label: "Nein, weiter" }]);
-      if (c === "redo") { S.caches[1] = {}; S.bad = {}; drawCaches(); delete S.slots.rdst; clearBadges(); narrSay("Wähle eine gezieltere An‑MAC."); return render(); }
-    }
-    await narrate("Jetzt bist du wieder <b>PC 1</b>. Schick endlich Nachricht 1 los!", [{ id: "n", label: "Ich bin PC 1 ▶", primary: true }]);
-    clearBadges(); goLevel(3);
-  }
-
-  /* ---- 3 Nachricht 1 ---- */
-  function renderSend(side) {
-    var ip = "192.168.1.103", cm = S.caches[1][ip];
-    side.appendChild(h("div", "who", "Du bist PC 1"));
-    side.appendChild(h("h2", "", "Schick Nachricht 1 los"));
-    side.appendChild(h("p", "lead", "In deinem ARP‑Cache steht jetzt ein Eintrag. Vervollständige den Rahmen."));
-    side.appendChild(frameEl("Rahmen: Nachricht 1", "von PC 1",
-      [["Von‑MAC", slotEl("msrc", "mac", "Absender", false)], ["An‑MAC", slotEl("mdst", "mac", "Empfänger", false)]],
-      ["„Ist der Drucker im 2. OG wieder online?“"]));
-    var chips = [{ type: "mac", kind: "mac", cap: "MAC von PC 1 (du)", label: pc(1).mac, value: pc(1).mac }];
-    if (cm) chips.push({ type: "mac", kind: "mac", cls: "cache", cap: "ARP‑Cache: " + ip, label: cm, value: cm });
-    side.appendChild(trayEl("Das weiß PC 1 jetzt", chips));
-    var a = h("div", "actions"); a.appendChild(button("Nachricht 1 senden ▶", "primary", sendMsg, S.busy)); side.appendChild(a);
-    if (S.err) side.appendChild(h("div", "note err", S.err));
-  }
-  async function sendMsg() {
-    if (S.busy) return; S.err = null;
-    if (missing(["msrc", "mdst"])) return;
-    var src = S.slots.msrc.v, dst = S.slots.mdst.v, me = pc(1);
-    if (src !== me.mac) { S.err = "Bei <b>Von‑MAC</b> steht immer deine eigene MAC."; return render(); }
-    S.busy = true; render(); clearBadges(); setActor(1);
-    var r = await travel({ src: src, dst: dst }, me, "msg", null);
-    var t = r.acc[0];
-    if (t && t.id === 3) {
-      badge(3, "Nachricht 1 angekommen!", "#17794a");
-      var c = await narrate("🎉 <b>Nachricht 1 ist bei PC 3!</b> PC 1 will gleich noch etwas an PC 3 schicken. Muss er dafür wieder fragen?",
-        [{ id: "again", label: "Ausprobieren", primary: true }, { id: "skip", label: "Weiter" }], "good");
-      if (c === "again") {
-        clearBadges();
-        await narrate("PC 1 schaut zuerst in seinen ARP‑Cache: " + m("192.168.1.103") + " → " + m(dst) + ". <b>Keine Frage nötig</b>, die Nachricht geht sofort los.");
-        var r2 = await travel({ src: src, dst: dst }, me, "msg", null);
-        badge(3, "Nachricht 2 angekommen!", "#17794a");
-      }
-      S.busy = false;
-      await narrate("Stark! Jetzt bekommen deine Entdeckungen ihre Fachbegriffe.", [{ id: "n", label: "Weiter: Begriffe ▶", primary: true }], "good");
-      clearBadges(); return goLevel(4);
-    }
-    S.busy = false;
-    if (t) {
-      badge(t.id, "Nachricht 1 gelesen?!", "#b3261e");
-      await narrate("Oh nein: Nachricht 1 ist bei <b>" + t.name + "</b> gelandet! Im ARP‑Cache steht die falsche MAC. Prüf die Antwort von PC 3.", [{ id: "fix", label: "Antwort korrigieren", primary: true }], "badn");
-    } else {
-      await narrate("Nachricht 1 ist nirgends angekommen. Die An‑MAC im Cache gehört keinem PC.", [{ id: "fix", label: "Antwort korrigieren", primary: true }], "badn");
-    }
-    S.caches[1] = {}; S.bad = {}; drawCaches(); delete S.slots.rmac; delete S.slots.mdst; clearBadges(); goLevel(2);
-  }
-
-  /* ---- 4 Begriffe ---- */
-  var TERMS = [
-    { id: "req", label: "ARP‑Request", slot: "t1", d: "Die <b>Frage</b> von PC 1: „Wer hat 192.168.1.103?“", hint: "Request heißt „Anfrage“." },
-    { id: "rep", label: "ARP‑Reply", slot: "t2", d: "Die <b>Antwort</b> von PC 3: „192.168.1.103 gehört zu …“", hint: "Reply heißt „Antwort“." },
-    { id: "bc", label: "Broadcast", slot: "t3", d: "Ein Rahmen an <b>alle</b>, An‑MAC " + m(BC), hint: "„broad“ heißt breit: an alle." },
-    { id: "uc", label: "Unicast", slot: "t4", d: "Ein Rahmen an <b>genau einen</b> PC, an dessen MAC", hint: "„uni“ heißt eins: an genau einen." },
-    { id: "cache", label: "ARP‑Cache", slot: "t5", d: "Die <b>Liste</b> „IP → MAC“, in der ein PC Antworten speichert", hint: "Ein Cache ist ein Zwischenspeicher." }
-  ];
-  function renderTerms(side) {
-    side.appendChild(h("div", "who", "Fachbegriffe"));
-    side.appendChild(h("h2", "", "Wie heißt das in echt?"));
-    side.appendChild(h("p", "lead", "Was du gespielt hast, heißt <b>ARP</b> (Address Resolution Protocol, „Adressauflösung“). Ordne die Begriffe zu."));
-    var tg = h("div", "targets");
-    TERMS.forEach(function (t) {
-      var row = h("div", "target" + (S.terms[t.slot] ? " right" : ""), "<div>" + t.d + "</div>");
-      var s = h("div", "slot"); s.dataset.slot = t.slot; s.dataset.kind = "term";
-      if (S.terms[t.slot]) { s.classList.add("filled"); s.innerHTML = "<span class='v'>✓ " + t.label + "</span>"; }
-      else s.innerHTML = "<span class='ph'>Begriff hierher</span>";
-      s.addEventListener("click", function () { if (!S.terms[t.slot] && S.sel && S.sel.type === "term") dropTerm(t.slot, S.sel); });
-      row.appendChild(s); tg.appendChild(row);
+      c.appendChild(body); box.appendChild(c);
     });
-    side.appendChild(tg);
-    var order = ["bc", "cache", "req", "uc", "rep"], used = Object.keys(S.terms).map(function (k) { return S.terms[k]; });
-    var chips = order.filter(function (id) { return used.indexOf(id) < 0; }).map(function (id) {
-      var t = TERMS.filter(function (x) { return x.id === id; })[0];
-      return { type: "term", kind: "term", cap: "Begriff", label: t.label, value: t.id };
-    });
-    if (chips.length) side.appendChild(trayEl("Begriffe", chips));
-    else {
-      side.appendChild(h("div", "note ok", "Alles richtig! Im Ethernet‑Frame steht übrigens im Typfeld " + m("0x0806") + ": Das zeigt an, dass ARP drinsteckt."));
-      var a = h("div", "actions"); a.appendChild(button("Ergebnis ansehen ▶", "primary", function () { goLevel(5); })); side.appendChild(a);
-    }
+    if (S.done[TASKS.length - 1]) box.insertBefore(resultEl(), box.querySelectorAll(".task")[TASKS.length] || null);
+    box.querySelectorAll("[data-open]").forEach(function (b) { b.onclick = function () { openMsg(+b.dataset.open); }; });
+    var n = Object.keys(S.done).filter(function (k) { return +k < TASKS.length; }).length;
+    $("progTxt").textContent = n >= TASKS.length ? "Alle Aufgaben gelöst" : "Aufgabe " + (n + 1) + " von " + TASKS.length;
+    $("progBar").style.width = (100 * n / TASKS.length) + "%";
   }
-  function dropTerm(slot, c) {
-    var t = TERMS.filter(function (x) { return x.slot === slot; })[0];
-    S.sel = null;
-    if (S.terms[slot]) return render();
-    if (t.id === c.value) { S.terms[slot] = c.value; render(); if (Object.keys(S.terms).length === TERMS.length) narrSay("Alle Begriffe sitzen. 🎉", "good"); }
-    else {
-      render(); var s = document.querySelector(".slot[data-slot='" + slot + "']"); if (s) s.classList.add("miss");
-      var ct = TERMS.filter(function (x) { return x.id === c.value; })[0];
-      toast("Passt nicht ganz. Tipp: " + ct.hint);
-    }
+  function resultEl() {
+    var r = h("div", "result");
+    r.innerHTML = "<h3>Ergebnis: So kommt PC 1 an die MAC von PC 3</h3>" +
+      "<div class='steps3'>" +
+      "<div><b class='t'>1. ARP‑Request (Broadcast)</b>PC 1 fragt alle: „Wer hat 192.168.1.103?“ Ziel‑MAC ist FF:FF:FF:FF:FF:FF. Der Switch verteilt die Frage an alle Ports, alle PCs lesen sie.</div>" +
+      "<div><b class='t'>2. ARP‑Reply (Unicast)</b>Nur PC 3 antwortet, gezielt an PC 1. Dessen MAC kennt er aus der Frage.</div>" +
+      "<div><b class='t'>3. ARP‑Cache</b>PC 1 merkt sich „192.168.1.103 → 00:1B:44:2C:91:E5“ und kann die Druckerfrage jetzt adressieren:</div></div>" +
+      "<div class='done-frame'><div style='background:var(--f-dst)'><div class='k'>Ziel‑MAC</div><div class='v'>00:1B:44:2C:91:E5</div></div><div style='background:var(--f-src)'><div class='k'>Quell‑MAC</div><div class='v'>00:1B:44:11:3A:B7</div></div><div style='background:var(--f-typ)'><div class='k'>Typ</div><div class='v'>0x0800</div></div><div style='background:var(--f-dat)'><div class='k'>Daten</div><div class='v' style='font-family:inherit;font-weight:600;white-space:normal'>an 192.168.1.103: „Ist der Drucker im 2. OG wieder online?“</div></div></div>";
+    return r;
   }
 
-  /* ---- 5 Ergebnis ---- */
-  function renderDone(side) {
-    side.appendChild(h("div", "who", "Mission erfüllt"));
-    side.appendChild(h("h2", "", "Du hast ARP selbst erfunden!"));
-    side.appendChild(h("p", "lead", "Genau so ist es seit 1982 im Standard <b>RFC 826</b> festgelegt, und so läuft es bis heute in jedem Firmennetz."));
-    var a = h("div", "actions"); a.appendChild(button("📄 Zusammenfassung öffnen", "primary", showSummary)); a.appendChild(button("★ Erkenntnisse", "", showInsights)); side.appendChild(a);
-    side.appendChild(h("div", "note tip", "<b>Bonus für Schnelle:</b> ARP vertraut jeder Antwort. Was passiert, wenn ein PC lügt?"));
-    var a2 = h("div", "actions"); a2.appendChild(button("😈 Bonus: PC 4 lügt", "", spoof, S.busy)); side.appendChild(a2);
-    if (S.spoofed) side.appendChild(h("div", "note", "<b>Besprecht zu zweit:</b><ol style='margin:6px 0 0;padding-left:20px'><li>Warum glaubt PC 1 der Antwort von PC 4?</li><li>Was kann PC 4 jetzt mit Nachricht 1 machen?</li><li>Warum ist das für ein Firmennetz gefährlich?</li></ol>"));
-  }
-  function showSummary() {
-    var o = overlay(
-      "<h2>So findet ein PC eine MAC‑Adresse: ARP</h2><p class='sub'>ARP = Address Resolution Protocol („Adressauflösung“). Aus einer bekannten IP‑Adresse wird im eigenen LAN die passende MAC‑Adresse.</p>" +
-      "<div class='flow'>" +
-      "<div class='step s1'><h3><span class='n'>1</span>Fragen</h3><p class='k'>ARP‑Request · Broadcast</p>PC 1 fragt <b>alle</b>: „Wer hat 192.168.1.103?“ Die An‑MAC ist " + m(BC) + ". Der Switch verteilt die Frage an alle Ports. Alle lesen sie, nur PC 3 fühlt sich angesprochen. Er merkt sich dabei IP und MAC von PC 1.<div class='ex'>Von: 00:1B:44:11:3A:B7\nAn:  FF:FF:FF:FF:FF:FF\nWer hat 192.168.1.103?</div></div>" +
-      "<div class='step s2'><h3><span class='n'>2</span>Antworten</h3><p class='k'>ARP‑Reply · Unicast</p>PC 3 antwortet <b>nur PC 1</b>. Dessen MAC kennt er aus der Frage. Der Switch leitet die Antwort gezielt an Port 2 weiter (Forwarding).<div class='ex'>Von: 00:1B:44:2C:91:E5\nAn:  00:1B:44:11:3A:B7\n192.168.1.103 → 00:1B:44:2C:91:E5</div></div>" +
-      "<div class='step s3'><h3><span class='n'>3</span>Merken</h3><p class='k'>ARP‑Cache</p>PC 1 speichert „IP → MAC“ in seinem ARP‑Cache und setzt die MAC als An‑MAC in Nachricht 1 ein. Bei der nächsten Nachricht muss er nicht neu fragen. Einträge verfallen nach einiger Zeit.<div class='ex'>192.168.1.103 → 00:1B:44:2C:91:E5</div></div>" +
-      "</div><div class='facts'>" +
-      "<div class='fact'><b>Flooding ist kein Broadcast</b>Eine unbekannte An‑MAC flutet der Switch zwar an alle Ports, aber die PCs werfen den Rahmen weg. Nur " + m(BC) + " nimmt jeder an.</div>" +
-      "<div class='fact'><b>Im Ethernet‑Frame</b>Das Typfeld " + m("0x0806") + " zeigt: Hier steckt ARP drin. ARP arbeitet nur im eigenen LAN.</div>" +
-      "<div class='fact'><b>ARP glaubt jedem</b>Antworten werden nicht geprüft. Ein Angreifer kann sich als anderer PC ausgeben (ARP‑Spoofing).</div>" +
-      "</div><div class='actions'><button class='btn primary' id='printBtn'>🖨 Drucken / als PDF speichern</button></div>");
-    o.sheet.querySelector("#printBtn").onclick = function () { window.print(); };
-  }
-  async function spoof() {
-    if (S.busy) return; S.busy = true; render(); clearBadges(); setActor(null);
-    var me = pc(1), p3 = pc(3), p4 = pc(4);
-    S.caches[1] = {}; S.bad = {}; drawCaches();
-    await narrate("Ein paar Minuten später ist der Eintrag im ARP‑Cache von PC 1 abgelaufen. PC 1 muss wieder fragen. Schau zu!");
-    await travel({ src: me.mac, dst: BC }, me, "req", null);
-    badge(2, "nicht meine IP → weg", "#8a96a3"); badge(3, "Das bin ich!", "#17794a"); badge(4, "Das sag ich auch! 😈", "#b3261e");
-    await narrate("PC 3 antwortet ehrlich. Aber <b>PC 4 antwortet auch</b>, obwohl er gar nicht 192.168.1.103 ist!");
-    clearBadges();
-    await travel({ src: p3.mac, dst: me.mac }, p3, "rep", null);
-    S.caches[1]["192.168.1.103"] = p3.mac; drawCaches();
-    await narrate("PC 1 speichert die Antwort von PC 3. Doch gleich danach kommt die Antwort von PC 4 …");
-    await travel({ src: p4.mac, dst: me.mac }, p4, "evil", null);
-    S.caches[1]["192.168.1.103"] = p4.mac; S.bad["1192.168.1.103"] = true; drawCaches();
-    await narrate("PC 1 <b>überschreibt</b> seinen Eintrag: " + m("192.168.1.103") + " → " + m(p4.mac) + ". ARP prüft nicht, wer die Wahrheit sagt.", null, "badn");
-    await travel({ src: me.mac, dst: p4.mac }, me, "msg", null);
-    badge(4, "Nachricht 1 gelesen! 😈", "#b3261e");
-    gain("spoof"); S.spoofed = true; S.busy = false;
-    await narrate("Nachricht 1 ist bei <b>PC 4</b> gelandet. Er kann sie lesen, verändern oder weiterleiten, ohne dass jemand es merkt. Das nennt man <b>ARP‑Spoofing</b>.", [{ id: "ok", label: "Verstanden", primary: true }], "badn");
-    clearBadges(); S.caches[1] = { "192.168.1.103": p3.mac }; S.bad = {}; drawCaches(); render();
-    narrSay("Besprecht rechts die drei Fragen.");
-  }
-
-  /* =================== Ablauf =================== */
-  function goLevel(n) {
-    S.level = n; S.err = null; S.sel = null; S.typing = null;
-    render();
-    var say = [
-      [1, "PC 1 möchte Nachricht 1 an PC 3 schicken. Rechts steht deine Mission."],
-      [1, "Du bist <b>PC 1</b>. Baue rechts eine Frage, mit der du die MAC zur IP " + m("192.168.1.103") + " findest."],
-      [3, "Du bist <b>PC 3</b>. Baue die Antwort für PC 1. Grün gestrichelte Karten hast du aus der Frage gelernt."],
-      [1, "Du bist wieder <b>PC 1</b>. In deinem ARP‑Cache steht jetzt ein Eintrag. Nutze ihn!"],
-      [null, "Zieh rechts jeden Begriff zu seiner Beschreibung."],
-      [null, "🎉 Mission erfüllt! Öffne rechts die Zusammenfassung."]
-    ][n];
-    setActor(say[0]); narrSay(say[1]);
-  }
-  function reset() { S = fresh(); updateIns(); drawNet(); goLevel(0); }
-  $("resetBtn").onclick = function () {
-    if (S.busy) { toast("Warte, bis die Animation fertig ist."); return; }
-    if (S.level === 0 || confirm("Mission wirklich neu starten?")) reset();
-  };
+  function renderAll() { renderTabs(); renderCap(); renderDetail(); renderTasks(); }
+  function reset() { S = fresh(); draw(); $("caption").textContent = "Öffne unten eine Nachricht aus dem Mitschnitt und spiel ihren Weg ab."; renderAll(); }
+  $("resetBtn").onclick = function () { if (!S.playing && confirm("Alle Antworten löschen und neu starten?")) reset(); };
 
   (function () {
     var b = $("fsBtn"), d = document, de = d.documentElement;
     function isFs() { return !!(d.fullscreenElement || d.webkitFullscreenElement); }
-    function upd() { b.innerHTML = (isFs() ? "⤡" : "⛶") + " Vollbild"; b.title = "Vollbild (Taste F)"; }
-    function tog() {
-      try {
-        if (isFs()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
-        else { var r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de); if (r && r.catch) r.catch(function () { toast("Vollbild ist hier gesperrt. Öffne die Seite direkt im Browser."); }); }
-      } catch (e) { toast("Vollbild wird hier nicht unterstützt."); }
-    }
+    function upd() { b.textContent = (isFs() ? "⤡" : "⛶") + " Vollbild"; b.title = "Vollbild (Taste F)"; }
+    function tog() { try { if (isFs()) (d.exitFullscreen || d.webkitExitFullscreen).call(d); else { var r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de); if (r && r.catch) r.catch(function () {}); } } catch (e) {} }
     b.onclick = function () { tog(); b.blur(); };
     d.addEventListener("fullscreenchange", upd); d.addEventListener("webkitfullscreenchange", upd);
-    d.addEventListener("keydown", function (e) { if ((e.key === "f" || e.key === "F") && !/INPUT|TEXTAREA/.test(e.target.tagName) && !e.metaKey && !e.ctrlKey && !e.altKey) tog(); });
+    d.addEventListener("keydown", function (e) { if ((e.key === "f" || e.key === "F") && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !e.metaKey && !e.ctrlKey && !e.altKey) tog(); });
     upd();
   })();
 
   reset();
   window.__S = function () { return S; };
+  window.__bytes = function (nr) { return build(rowByNr(nr)).bytes.map(hx).join(" "); };
 })();
 </script>
 </body>

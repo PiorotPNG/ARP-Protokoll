@@ -1,7 +1,8 @@
-# Netz-Simulator: Nachricht 1
+# Mitschnitt am Switch: Wie kommt PC 1 an die MAC von PC 3?
 
-Interaktive Übung für LF 3 (IT-Systeme), BS Info München.
-Interaktive Mission statt Infoblatt: Schülerinnen und Schüler bauen per Drag & Drop die Frage (ARP-Request) und die Antwort (ARP-Reply),
-mit denen PC 1 die MAC-Adresse von PC 3 herausfindet, und sehen im Netz, was Switch und PCs daraus machen.
+Übung für LF 3 (IT-Systeme), BS Info München.
+Die Schülerinnen und Schüler werten einen Mitschnitt aus (ARP-Request, ARP-Reply, zwei IPv4-Nachrichten),
+öffnen jede Nachricht mit ihren Feldern und echten Bytes, spielen ihren Weg durch den Switch ab und lösen 7 Aufgaben mit Rückmeldung.
+Zusatz: Mitschnitt mit ARP-Spoofing.
 
-Die Seite ist eine einzelne Datei (`index.html`) ohne externe Abhängigkeiten.
+Einzelne Datei (`index.html`) ohne externe Abhängigkeiten.

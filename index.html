@@ -313,11 +313,21 @@
     var others = [1, 2, 3, 4].filter(function (n) { return n !== from.port; });
     var out = r.dst === BC || SWT[r.dst] === undefined ? others : [SWT[r.dst]];
     await Promise.all(out.map(function (n) { var gg = pkt(col, lab); G.cab[n].classList.add("hot"); return move(gg, route(byPort(n), false), 1100).then(function () { G.cab[n].classList.remove("hot"); gg.remove(); }); }));
-    var acc = [], rej = [];
-    out.slice().sort(function (a, b) { return byPort(a).id - byPort(b).id; }).forEach(function (n) { var p = byPort(n); if (r.dst === BC || r.dst === p.mac) { acc.push(p.id); badge(p.id, "angenommen", "#17794a"); } else { rej.push(p.id); badge(p.id, "verworfen", "#8a96a3"); } });
+    var acc = [], rej = [], hit = [], miss = [], isReq = r.m.kind === "arp" && r.m.op === 1 && r.dst === BC;
+    out.slice().sort(function (a, b) { return byPort(a).id - byPort(b).id; }).forEach(function (n) {
+      var p = byPort(n);
+      if (r.dst === BC || r.dst === p.mac) {
+        acc.push(p.id);
+        if (!isReq) badge(p.id, "angenommen", "#17794a");
+        else if (p.ip === r.m.tpa) { hit.push(p.id); badge(p.id, "gelesen: meine IP ✓", "#17794a"); }
+        else { miss.push(p.id); badge(p.id, "gelesen, verworfen", "#b7791f"); }
+      } else { rej.push(p.id); badge(p.id, "verworfen", "#8a96a3"); }
+    });
     function list(a) { return a.map(function (i) { return "PC " + i; }).join(", ").replace(/, ([^,]*)$/, " und $1"); }
-    $("caption").innerHTML = "<b>Nr. " + r.nr + ":</b> Der Switch schickt die Nachricht an " + (out.length > 1 ? "Port " + out.join(", ").replace(/, ([^,]*)$/, " und $1") : "Port " + out[0]) + ". " +
-      (acc.length ? list(acc) + (acc.length > 1 ? " nehmen" : " nimmt") + " sie an." : "") + (rej.length ? " " + list(rej) + (rej.length > 1 ? " verwerfen" : " verwirft") + " sie." : "");
+    var txt = "<b>Nr. " + r.nr + ":</b> Der Switch schickt die Nachricht an " + (out.length > 1 ? "Port " + out.join(", ").replace(/, ([^,]*)$/, " und $1") : "Port " + out[0]) + ". ";
+    if (isReq) txt += list(acc) + " lesen sie. " + (hit.length ? "Nur " + list(hit) + " hat die gesuchte IP. " : "Keiner hat die gesuchte IP. ") + (miss.length ? list(miss) + (miss.length > 1 ? " verwerfen" : " verwirft") + " sie danach." : "");
+    else txt += (acc.length ? list(acc) + (acc.length > 1 ? " nehmen" : " nimmt") + " sie an." : "") + (rej.length ? " " + list(rej) + (rej.length > 1 ? " verwerfen" : " verwirft") + " sie." : "");
+    $("caption").innerHTML = txt;
     S.playing = false; renderDetail();
   }
 
@@ -425,12 +435,12 @@
       }, sol: function () { $("a1").value = "19"; } },
     { t: "Nr. 17: An wen geht die Nachricht?",
       b: "<p>" + open(17) + " Schau dir die Ziel‑MAC an.</p><p class='q'>Wem gehört die Ziel‑MAC von Nr. 17?</p>" + sel("a2a", ["PC 1", "PC 2", "PC 3", "PC 4", "keinem PC"]) +
-         "<p class='q'>Spiel den Weg von Nr. 17 ab. Welche PCs nehmen die Nachricht an?</p>" + checks("a2b", ["PC 1", "PC 2", "PC 3", "PC 4"]),
+         "<p class='q'>Spiel den Weg von Nr. 17 ab. Welche PCs lesen die Nachricht?</p>" + checks("a2b", ["PC 1", "PC 2", "PC 3", "PC 4"]),
       check: function () {
         var a = val("a2a"), b = checked("a2b"); if (!a || !b) return null;
         if (a !== "keinem PC") return [false, "Vergleiche die Ziel‑MAC mit den MAC‑Adressen der PCs im Netzbild und in der Tabelle des Switches."];
-        if (b !== "PC 2,PC 3,PC 4") return [false, (b.indexOf("PC 1") >= 0 ? "PC 1 ist der Absender. " : "") + "Spiel den Weg ab (▶) und achte auf die grünen Markierungen."];
-        return [true, "Richtig. " + "FF:FF:FF:FF:FF:FF gehört keinem Gerät. Trotzdem schickt der Switch die Nachricht an alle anderen Ports, und <b>alle</b> PCs nehmen sie an."];
+        if (b !== "PC 2,PC 3,PC 4") return [false, (b.indexOf("PC 1") >= 0 ? "PC 1 ist der Absender. " : "") + "Spiel den Weg ab (▶) und achte auf die Markierungen an den PCs."];
+        return [true, "Richtig. " + "FF:FF:FF:FF:FF:FF gehört keinem Gerät. Trotzdem schickt der Switch die Nachricht an alle anderen Ports, und <b>alle</b> PCs lesen sie. Antworten tut aber nur der PC mit der gesuchten IP, die anderen verwerfen sie danach."];
       }, sol: function () { $("a2a").value = "keinem PC"; document.querySelectorAll("#a2b input").forEach(function (e) { e.checked = e.value !== "PC 1"; }); } },
     { t: "Was ist an FF:FF:FF:FF:FF:FF besonders?",
       b: "<p class='q'>Rechne FF (hexadezimal) ins Binärsystem um:</p><input type='text' id='a3a' placeholder='8 Bit' autocomplete='off'>" +
@@ -439,7 +449,7 @@
         var a = val("a3a").replace(/\s/g, ""), b = val("a3b").trim(); if (!a || !b) return null;
         if (a !== "11111111") return [false, "F = 15 = 1111. FF besteht aus zwei F."];
         if (b !== "48") return [false, "Die MAC hat 6 Byte mit je 8 Bit. Jedes Byte ist FF."];
-        return [true, "Genau: Alle 48 Bit sind 1. Diese Sonderadresse heißt " + term("Broadcast‑Adresse") + ". Eine Nachricht an alle heißt " + term("Broadcast") + ". Jeder PC im LAN nimmt sie an, und der Switch verteilt sie immer an alle Ports."];
+        return [true, "Genau: Alle 48 Bit sind 1. Diese Sonderadresse heißt " + term("Broadcast‑Adresse") + ". Eine Nachricht an alle heißt " + term("Broadcast") + ". Der Switch verteilt sie immer an alle Ports, und jeder PC im LAN liest sie."];
       }, sol: function () { $("a3a").value = "11111111"; $("a3b").value = "48"; } },
     { t: "Was fragt PC 1 in Nr. 17?",
       b: "<p>" + open(17) + " Lies die Daten.</p><p class='q'>PC 1 sucht die MAC‑Adresse zu dieser IP:</p><input type='text' id='a4a' placeholder='IP‑Adresse' autocomplete='off'>" +
@@ -535,7 +545,7 @@
     var r = h("div", "result");
     r.innerHTML = "<h3>Ergebnis: So kommt PC 1 an die MAC von PC 3</h3>" +
       "<div class='steps3'>" +
-      "<div><b class='t'>1. ARP‑Request (Broadcast)</b>PC 1 fragt alle: „Wer hat 192.168.1.103?“ Ziel‑MAC ist FF:FF:FF:FF:FF:FF. Der Switch verteilt die Frage an alle Ports, alle PCs lesen sie.</div>" +
+      "<div><b class='t'>1. ARP‑Request (Broadcast)</b>PC 1 fragt alle: „Wer hat 192.168.1.103?“ Ziel‑MAC ist FF:FF:FF:FF:FF:FF. Der Switch verteilt die Frage an alle Ports. Alle PCs lesen sie, aber nur PC 3 hat die gesuchte IP. PC 2 und PC 4 verwerfen sie.</div>" +
       "<div><b class='t'>2. ARP‑Reply (Unicast)</b>Nur PC 3 antwortet, gezielt an PC 1. Dessen MAC kennt er aus der Frage.</div>" +
       "<div><b class='t'>3. ARP‑Cache</b>PC 1 merkt sich „192.168.1.103 → 00:1B:44:2C:91:E5“ und kann die Druckerfrage jetzt adressieren:</div></div>" +
       "<div class='done-frame'><div style='background:var(--f-dst)'><div class='k'>Ziel‑MAC</div><div class='v'>00:1B:44:2C:91:E5</div></div><div style='background:var(--f-src)'><div class='k'>Quell‑MAC</div><div class='v'>00:1B:44:11:3A:B7</div></div><div style='background:var(--f-typ)'><div class='k'>Typ</div><div class='v'>0x0800</div></div><div style='background:var(--f-dat)'><div class='k'>Daten</div><div class='v' style='font-family:inherit;font-weight:600;white-space:normal'>an 192.168.1.103: „Ist der Drucker im 2. OG wieder online?“</div></div></div>";

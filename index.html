@@ -152,7 +152,7 @@
 <body>
 <header>
   <h1>Mitschnitt am Switch: Wie kommt PC 1 an die MAC von PC 3?</h1>
-  <div class="prog"><span id="progTxt">Aufgabe 1 von 7</span><span class="bar"><i id="progBar" style="width:0%"></i></span></div>
+  <div class="prog"><span id="progTxt">Aufgabe 1 von 9</span><span class="bar"><i id="progBar" style="width:0%"></i></span></div>
   <button class="hbtn" id="resetBtn">↺ Neu starten</button>
   <button class="hbtn" id="fsBtn"></button>
 </header>
@@ -337,7 +337,7 @@
     ["mi", "fr"].forEach(function (k) {
       var b = h("button", S.cap === k ? "on" : "", CAPS[k].name);
       b.disabled = k === "fr" && !S.frUnlocked;
-      if (b.disabled) b.title = "Wird nach Aufgabe 7 freigeschaltet";
+      if (b.disabled) b.title = "Wird nach der letzten Aufgabe freigeschaltet";
       b.onclick = function () { S.cap = k; S.sel = null; clearBadges(); $("caption").textContent = "Öffne eine Nachricht aus dem Mitschnitt und spiel ihren Weg ab."; renderAll(); };
       t.appendChild(b);
     });
@@ -413,9 +413,11 @@
   }
 
   /* ---------- Aufgaben ---------- */
+  function mix(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function pickRadio(id, needle) { document.querySelectorAll("input[name='" + id + "']").forEach(function (e) { e.checked = e.value.indexOf(needle) >= 0; }); }
   function sel(id, opts) { return "<select id='" + id + "'><option value=''>bitte wählen</option>" + opts.map(function (o) { return "<option>" + o + "</option>"; }).join("") + "</select>"; }
   function checks(id, opts) { return "<div class='checks' id='" + id + "'>" + opts.map(function (o) { return "<label><input type='checkbox' value='" + o + "'>" + o + "</label>"; }).join("") + "</div>"; }
-  function radios(id, opts) { return "<div class='opts' id='" + id + "'>" + opts.map(function (o) { return "<label><input type='radio' name='" + id + "' value='" + o + "'><span>" + o + "</span></label>"; }).join("") + "</div>"; }
+  function radios(id, opts) { return "<div class='opts' id='" + id + "'>" + mix(opts).map(function (o) { return "<label><input type='radio' name='" + id + "' value='" + o + "'><span>" + o + "</span></label>"; }).join("") + "</div>"; }
   function val(id) { var e = $(id); return e ? e.value : ""; }
   function radio(id) { var e = document.querySelector("input[name='" + id + "']:checked"); return e ? e.value : ""; }
   function checked(id) { return Array.prototype.slice.call(document.querySelectorAll("#" + id + " input:checked")).map(function (e) { return e.value; }).sort().join(","); }
@@ -433,6 +435,19 @@
         if (v === "23") return [false, "Nr. 23 geht auch von PC 1 an PC 3, aber über eine Minute später. Lies die Spalte Info."];
         return [false, "Lies die Spalte Info: In welcher Nachricht steht die Frage nach dem Drucker?"];
       }, sol: function () { $("a1").value = "19"; } },
+    { t: "Warum reicht die IP nicht?",
+      b: "<p>" + open(19) + " Die IP von PC 3 steht in den Daten. Trotzdem musste PC 1 vorher die MAC von PC 3 herausfinden.</p><p class='q'>Warum muss PC 1 die MAC von PC 3 kennen?</p>" +
+         radios("b1", ["Der Switch leitet nur nach der Ziel‑MAC im Kopf weiter. Die IP steckt in den Daten, die liest er nicht.",
+                       "Die MAC ist sicherer als die IP, deshalb wird sie zusätzlich mitgeschickt.",
+                       "Die IP reicht eigentlich aus. Die MAC dient nur zur Kontrolle beim Empfänger."]) +
+         "<p class='q'>Was würde die Netzwerkkarte von PC 3 mit einer Nachricht machen, deren Ziel‑MAC nicht ihre eigene ist?</p>" +
+         radios("b2", ["Sie verwirft die Nachricht, ohne in die Daten zu schauen.", "Sie schaut in die Daten und nimmt sie an, wenn die IP passt.", "Sie leitet sie an den richtigen PC weiter."]),
+      check: function () {
+        var a = radio("b1"), b = radio("b2"); if (!a || !b) return null;
+        if (a.indexOf("Switch leitet") < 0) return [false, "Erinnere dich ans Rollenspiel: Worauf hat der Switch geschaut, und was steht in seiner Tabelle?"];
+        if (b.indexOf("verwirft") < 0) return [false, "Denk an die Nachrichten im Rollenspiel, die bei den falschen PCs gelandet sind."];
+        return [true, "Richtig. Switch und Netzwerkkarten arbeiten nur mit dem Kopf der Nachricht, also mit MAC‑Adressen. Die IP ist für Programme und Menschen da und steckt in den Daten. Ohne die richtige Ziel‑MAC kommt die Nachricht nicht an."];
+      }, sol: function () { pickRadio("b1", "Switch leitet"); pickRadio("b2", "verwirft"); } },
     { t: "Nr. 17: An wen geht die Nachricht?",
       b: "<p>" + open(17) + " Schau dir die Ziel‑MAC an.</p><p class='q'>Wem gehört die Ziel‑MAC von Nr. 17?</p>" + sel("a2a", ["PC 1", "PC 2", "PC 3", "PC 4", "keinem PC"]) +
          "<p class='q'>Spiel den Weg von Nr. 17 ab. Welche PCs lesen die Nachricht?</p>" + checks("a2b", ["PC 1", "PC 2", "PC 3", "PC 4"]),
@@ -459,10 +474,10 @@
         if (a !== "192.168.1.103" && a !== "103") return [false, "Schau in den Daten von Nr. 17 bei Empfänger‑IP."];
         if (b.indexOf("kennt") < 0) return [false, "Was will PC 1 mit dieser Nachricht überhaupt herausfinden?"];
         return [true, "Richtig. PC 1 fragt alle: „Wer hat 192.168.1.103? Antwort an 192.168.1.101.“ Die gesuchte MAC füllt er mit Nullen, weil er sie noch nicht kennt."];
-      }, sol: function () { $("a4a").value = "192.168.1.103"; document.querySelector("input[name='a4b']").checked = true; } },
+      }, sol: function () { $("a4a").value = "192.168.1.103"; pickRadio("a4b", "kennt"); } },
     { t: "Nr. 18: Die Antwort",
       b: "<p>" + open(18) + " und spiel den Weg ab.</p><p class='q'>Wer antwortet?</p>" + sel("a5a", ["PC 1", "PC 2", "PC 3", "PC 4", "der Switch"]) +
-         "<p class='q'>An wen geht die Antwort?</p>" + sel("a5b", ["an alle", "nur an PC 1", "nur an den Switch"]) +
+         "<p class='q'>An wen geht die Antwort?</p>" + sel("a5b", mix(["an alle", "nur an PC 1", "nur an den Switch"])) +
          "<p class='q'>Woher kennt PC 3 die MAC‑Adresse von PC 1?</p>" + radios("a5c", ["Aus Nr. 17: Dort stand sie als Quell‑MAC und Absender‑MAC.", "Aus der MAC‑Tabelle des Switches.", "Sie ist in PC 3 fest eingestellt."]),
       check: function () {
         var a = val("a5a"), b = val("a5b"), c = radio("a5c"); if (!a || !b || !c) return null;
@@ -470,10 +485,24 @@
         if (b !== "nur an PC 1") return [false, "Schau bei Nr. 18 auf die Ziel‑MAC und spiel den Weg ab."];
         if (c.indexOf("Nr. 17") < 0) return [false, "Ein PC kann die Tabelle des Switches nicht lesen. Was hat PC 3 kurz vorher bekommen?"];
         return [true, "Richtig. PC 3 hat die MAC von PC 1 aus Nr. 17 gelernt und antwortet gezielt nur ihm. Eine Nachricht an genau einen Empfänger heißt " + term("Unicast") + ". Der Switch leitet sie nur an Port 2 weiter."];
-      }, sol: function () { $("a5a").value = "PC 3"; $("a5b").value = "nur an PC 1"; document.querySelector("input[name='a5c']").checked = true; } },
+      }, sol: function () { $("a5a").value = "PC 3"; $("a5b").value = "nur an PC 1"; pickRadio("a5c", "Nr. 17"); } },
+    { t: "Ziel‑MAC und Empfänger‑MAC",
+      b: "<p>Nr. 17 und Nr. 18 enthalten zwei MAC‑Adressen für das Ziel: die <b>Ziel‑MAC</b> im Kopf und die <b>Empfänger‑MAC</b> in den ARP‑Daten. " + open(17) + " " + open(18) + "</p>" +
+         "<p class='q'>Bei Nr. 17 sind beide verschieden (FF:FF:FF:FF:FF:FF und 00:00:00:00:00:00). Wofür ist welches Feld da?</p>" +
+         radios("c1", ["Die Ziel‑MAC im Kopf sagt Switch und Netzwerkkarten, wer die Nachricht bekommt. Die Empfänger‑MAC gehört zur Frage selbst: Sie ist das, was PC 1 sucht.",
+                       "Beide bedeuten dasselbe. Die Empfänger‑MAC ist nur eine Kopie zur Sicherheit.",
+                       "Die Empfänger‑MAC ist die MAC des Switches, die Ziel‑MAC die von PC 3."]) +
+         "<p class='q'>Bei Nr. 18 stehen in beiden Feldern dieselbe MAC. Warum?</p>" +
+         radios("c2", ["Die Antwort geht gezielt an PC 1, und PC 3 kennt dessen MAC schon.", "Der Switch hat die beiden Felder angeglichen.", "In einer Antwort müssen beide Felder immer leer sein."]),
+      check: function () {
+        var a = radio("c1"), b = radio("c2"); if (!a || !b) return null;
+        if (a.indexOf("sagt Switch") < 0) return [false, "Wer liest den Kopf einer Nachricht? Und was will PC 1 mit der Frage herausfinden?"];
+        if (b.indexOf("gezielt") < 0) return [false, "Ein Switch verändert keine Nachrichten. An wen geht Nr. 18?"];
+        return [true, "Richtig. Der Kopf regelt die Zustellung, die ARP‑Daten sind der Inhalt der Frage. Bei der Frage ist der Empfänger unbekannt (Nullen), zugestellt wird an alle (FF). Bei der Antwort ist der Empfänger bekannt, deshalb steht in beiden Feldern die MAC von PC 1."];
+      }, sol: function () { pickRadio("c1", "sagt Switch"); pickRadio("c2", "gezielt"); } },
     { t: "Das Feld Typ",
-      b: "<p>Nr. 17 und 18 haben im Feld Typ den Wert 0x0806, Nr. 19 und 23 den Wert 0x0800.</p><p class='q'>Wofür sind die Nachrichten mit 0x0806 da?</p>" + sel("a6a", ["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"]) +
-         "<p class='q'>Und die mit 0x0800?</p>" + sel("a6b", ["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"]),
+      b: "<p>Nr. 17 und 18 haben im Feld Typ den Wert 0x0806, Nr. 19 und 23 den Wert 0x0800.</p><p class='q'>Wofür sind die Nachrichten mit 0x0806 da?</p>" + sel("a6a", mix(["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"])) +
+         "<p class='q'>Und die mit 0x0800?</p>" + sel("a6b", mix(["um die MAC‑Adresse herauszufinden", "um die eigentlichen Daten zu transportieren"])),
       check: function () {
         var a = val("a6a"), b = val("a6b"); if (!a || !b) return null;
         if (a.indexOf("MAC") < 0 || b.indexOf("Daten") < 0) return [false, "Vergleiche, was in den Daten von Nr. 17 und Nr. 19 steht."];
@@ -488,7 +517,7 @@
         var a = radio("a7"); if (!a) return null;
         if (a.indexOf("gemerkt") < 0) return [false, "Vergleiche die beiden Ausgaben von arp -a. Was ist dazugekommen?"];
         return [true, "Richtig. PC 1 speichert die Antwort in seinem " + term("ARP‑Cache") + " (das zeigt arp -a). „dynamisch“ heißt: Der Eintrag verfällt nach einiger Zeit. Dann fragt PC 1 wieder."];
-      }, sol: function () { document.querySelector("input[name='a7']").checked = true; } }
+      }, sol: function () { pickRadio("a7", "gemerkt"); } }
   ];
   var EXTRA = { t: "Zusatz: Mitschnitt vom Freitag",
     b: "<p>Am Freitag beschwert sich PC 3: Die Nachricht von PC 1 kam nie an. Der Admin hat wieder mitgeschnitten. Wechsle oben zum Mitschnitt <b>Freitag</b>.</p>" +
@@ -499,7 +528,7 @@
       if (a !== "42") return [false, "Vergleiche die Absender‑IP und die Absender‑MAC in den Daten der beiden Antworten."];
       if (b.indexOf("PC 4 hat") < 0) return [false, "Schau bei Nr. 45: Zu welcher IP soll sie, und an welche MAC geht sie?"];
       return [true, "Richtig. Nr. 42 ist eine gefälschte Antwort: PC 4 behauptet, 192.168.1.103 zu sein. ARP prüft das nicht. PC 1 überschreibt seinen ARP‑Cache, und Nr. 45 mit dem Passwort landet bei PC 4. Das nennt man " + term("ARP‑Spoofing") + "."];
-    }, sol: function () { $("x1").value = "42"; document.querySelector("input[name='x2']").checked = true; } };
+    }, sol: function () { $("x1").value = "42"; pickRadio("x2", "PC 4 hat"); } };
 
   function renderTasks() {
     var box = $("tasks"); box.innerHTML = "";
@@ -554,7 +583,18 @@
 
   function renderAll() { renderTabs(); renderCap(); renderDetail(); renderTasks(); }
   function reset() { S = fresh(); draw(); $("caption").textContent = "Öffne unten eine Nachricht aus dem Mitschnitt und spiel ihren Weg ab."; renderAll(); }
-  $("resetBtn").onclick = function () { if (!S.playing && confirm("Alle Antworten löschen und neu starten?")) reset(); };
+  var resetArm = null;
+  $("resetBtn").onclick = function () {
+    var b = $("resetBtn");
+    if (S.playing) return;
+    if (!resetArm) {
+      b.textContent = "Wirklich alles löschen? Nochmal klicken"; b.style.background = "#fdecea"; b.style.color = "#b3261e";
+      resetArm = setTimeout(function () { resetArm = null; b.textContent = "↺ Neu starten"; b.style.background = ""; b.style.color = ""; }, 4000);
+      return;
+    }
+    clearTimeout(resetArm); resetArm = null; b.textContent = "↺ Neu starten"; b.style.background = ""; b.style.color = "";
+    reset(); document.querySelectorAll(".col, .scrollpart").forEach(function (c) { c.scrollTop = 0; });
+  };
 
   (function () {
     var b = $("fsBtn"), d = document, de = d.documentElement;
